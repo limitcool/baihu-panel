@@ -16,6 +16,20 @@ func NewLogController() *LogController {
 	return &LogController{}
 }
 
+// GetLogs 获取任务日志列表
+// @Summary 获取任务日志列表
+// @Description 分页获取任务日志列表，支持按任务 ID、任务名称、状态筛选
+// @Tags 日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param task_id query string false "任务 ID"
+// @Param task_name query string false "任务名称"
+// @Param status query string false "状态"
+// @Param page query int false "页码"
+// @Param page_size query int false "每页数量"
+// @Success 200 {object} utils.Response{data=utils.PaginationData{list=[]vo.TaskLogVO}}
+// @Router /logs [get]
 func (lc *LogController) GetLogs(c *gin.Context) {
 	p := utils.ParsePagination(c)
 	taskID := c.DefaultQuery("task_id", "")
@@ -85,6 +99,17 @@ func (lc *LogController) GetLogs(c *gin.Context) {
 	utils.PaginatedResponse(c, result, total, p)
 }
 
+// GetLogDetail 获取日志详情
+// @Summary 获取日志详情
+// @Description 根据 ID 获取任务日志详细内容（包含输出）
+// @Tags 日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "日志ID"
+// @Success 200 {object} utils.Response{data=vo.TaskLogVO}
+// @Failure 404 {object} utils.Response
+// @Router /logs/{id} [get]
 func (lc *LogController) GetLogDetail(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -101,6 +126,17 @@ func (lc *LogController) GetLogDetail(c *gin.Context) {
 	utils.Success(c, vo.ToTaskLogVO(&log))
 }
 
+// ClearLogs 清空日志
+// @Summary 清空日志
+// @Description 清空所有日志或指定任务的日志
+// @Tags 日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param body body object false "清空范围信息"
+// @Success 200 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /logs/clear [post]
 func (lc *LogController) ClearLogs(c *gin.Context) {
 	var req struct {
 		TaskID *string `json:"task_id"`
@@ -126,6 +162,17 @@ func (lc *LogController) ClearLogs(c *gin.Context) {
 	utils.SuccessMsg(c, "日志清空成功")
 }
 
+// DeleteLog 删除日志
+// @Summary 删除日志
+// @Description 根据 ID 删除单条任务日志
+// @Tags 日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "日志ID"
+// @Success 200 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /logs/{id} [delete]
 func (lc *LogController) DeleteLog(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {

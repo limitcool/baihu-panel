@@ -31,10 +31,17 @@ type SecurityConfig struct {
 	Secret string `ini:"secret"`
 }
 
+type SwaggerConfig struct {
+	Enabled  bool   `ini:"enabled"`
+	User     string `ini:"user"`
+	Password string `ini:"password"`
+}
+
 type AppConfig struct {
 	Server   ServerConfig   `ini:"server"`
 	Database DatabaseConfig `ini:"database"`
 	Security SecurityConfig `ini:"security"`
+	Swagger  SwaggerConfig  `ini:"swagger"`
 }
 
 var Config *AppConfig
@@ -74,6 +81,11 @@ func LoadConfig(path string) (*AppConfig, error) {
 		},
 		Security: SecurityConfig{
 			Secret: "",
+		},
+		Swagger: SwaggerConfig{
+			Enabled:  false,
+			User:     "admin",
+			Password: "swagger_password",
 		},
 	}
 
@@ -141,6 +153,16 @@ func applyEnvOverrides() {
 
 	// Security
 	getEnvStr("BH_SECRET", &Config.Security.Secret)
+
+	// Swagger
+	vSwaggerEnabled := os.Getenv("BH_SWAGGER_ENABLED")
+	if vSwaggerEnabled == "true" || vSwaggerEnabled == "1" {
+		Config.Swagger.Enabled = true
+	} else if vSwaggerEnabled == "false" || vSwaggerEnabled == "0" {
+		Config.Swagger.Enabled = false
+	}
+	getEnvStr("BH_SWAGGER_USER", &Config.Swagger.User)
+	getEnvStr("BH_SWAGGER_PASSWORD", &Config.Swagger.Password)
 }
 
 func GetConfig() *AppConfig {

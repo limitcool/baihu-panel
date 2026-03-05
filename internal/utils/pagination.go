@@ -51,12 +51,20 @@ func (p Pagination) Offset() int {
 	return (p.Page - 1) * p.PageSize
 }
 
+// PaginationData 分页数据
+type PaginationData struct {
+	List     interface{} `json:"list"`
+	Total    int64       `json:"total"`
+	Page     int         `json:"page"`
+	PageSize int         `json:"page_size"`
+}
+
 // PaginatedResponse 分页响应
 func PaginatedResponse(c *gin.Context, data interface{}, total int64, p Pagination) {
-	Success(c, gin.H{
-		"data":      data,
-		"total":     total,
-		"page":      p.Page,
-		"page_size": p.PageSize,
+	Success(c, PaginationData{
+		List:     data,
+		Total:    total,
+		Page:     p.Page,
+		PageSize: p.PageSize,
 	})
 }

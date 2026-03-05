@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"github.com/engigu/baihu-panel/internal/constant"
@@ -114,4 +115,26 @@ func SetAuthCookie(c *gin.Context, token string, expireDays int) {
 // ClearAuthCookie 清除认证 Cookie
 func ClearAuthCookie(c *gin.Context) {
 	c.SetCookie(constant.CookieName, "", -1, "/", "", false, true)
+}
+
+// SwaggerAuth Swagger 认证中间件 (Basic Auth)
+func SwaggerAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		cfg := services.GetConfig()
+		if !cfg.Swagger.Enabled {
+			c.Status(404)
+			c.Abort()
+			return
+		}
+
+		user, password, hasAuth := c.Request.BasicAuth()
+		if hasAuth && user == cfg.Swagger.User && password == cfg.Swagger.Password {
+			c.Next()
+			return
+		}
+
+		c.Header("WWW-Authenticate", `Basic realm="restricted"`)
+		c.Status(http.StatusUnauthorized)
+		c.Abort()
+	}
 }

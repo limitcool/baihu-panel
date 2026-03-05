@@ -105,6 +105,21 @@ func (tc *TaskController) CreateTask(c *gin.Context) {
 	utils.Success(c, vo.ToTaskVO(task))
 }
 
+// GetTasks 获取任务列表
+// @Summary 获取任务列表
+// @Description 分页获取任务列表，支持按名称、Agent ID、标签、类型筛选
+// @Tags 任务
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param name query string false "任务名称"
+// @Param agent_id query string false "Agent ID"
+// @Param tags query string false "标签"
+// @Param type query string false "任务类型"
+// @Param page query int false "页码"
+// @Param page_size query int false "每页数量"
+// @Success 200 {object} utils.Response{data=utils.PaginationData{list=[]vo.TaskVO}}
+// @Router /tasks [get]
 func (tc *TaskController) GetTasks(c *gin.Context) {
 	p := utils.ParsePagination(c)
 	name := c.DefaultQuery("name", "")
@@ -122,6 +137,17 @@ func (tc *TaskController) GetTasks(c *gin.Context) {
 	utils.PaginatedResponse(c, vo.ToTaskVOListFromModels(tasks), total, p)
 }
 
+// GetTask 获取任务详情
+// @Summary 获取任务详情
+// @Description 根据 ID 获取任务详情
+// @Tags 任务
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "任务ID"
+// @Success 200 {object} utils.Response{data=vo.TaskVO}
+// @Failure 404 {object} utils.Response
+// @Router /tasks/{id} [get]
 func (tc *TaskController) GetTask(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -138,6 +164,18 @@ func (tc *TaskController) GetTask(c *gin.Context) {
 	utils.Success(c, vo.ToTaskVO(task))
 }
 
+// UpdateTask 更新任务
+// @Summary 更新任务
+// @Description 根据 ID 更新任务信息
+// @Tags 任务
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "任务ID"
+// @Param body body object true "任务更新信息"
+// @Success 200 {object} utils.Response{data=vo.TaskVO}
+// @Failure 404 {object} utils.Response
+// @Router /tasks/{id} [put]
 func (tc *TaskController) UpdateTask(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -221,6 +259,17 @@ func (tc *TaskController) UpdateTask(c *gin.Context) {
 	utils.Success(c, vo.ToTaskVO(task))
 }
 
+// DeleteTask 删除任务
+// @Summary 删除任务
+// @Description 根据 ID 删除任务
+// @Tags 任务
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "任务ID"
+// @Success 200 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /tasks/{id} [delete]
 func (tc *TaskController) DeleteTask(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -251,6 +300,17 @@ func (tc *TaskController) DeleteTask(c *gin.Context) {
 	utils.SuccessMsg(c, "删除成功")
 }
 
+// StopTask 停止任务
+// @Summary 停止任务
+// @Description 根据运行日志 ID 停止正在执行的任务
+// @Tags 任务
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param logID path string true "运行日志ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Router /tasks/stop/{logID} [post]
 func (tc *TaskController) StopTask(c *gin.Context) {
 	logID := c.Param("logID")
 	if logID == "" {

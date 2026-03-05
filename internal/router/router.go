@@ -11,6 +11,8 @@ import (
 	"github.com/engigu/baihu-panel/internal/static"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Controllers struct {
@@ -82,6 +84,9 @@ func Setup(c *Controllers) *gin.Engine {
 			ctx.Data(200, "image/svg+xml", data)
 		})
 	}
+
+	// Swagger documentation (带 Basic Auth 认证)
+	root.GET("/swagger/*any", middleware.SwaggerAuth(), ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API 路由组
 	api := root.Group("/api/v1")

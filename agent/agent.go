@@ -80,6 +80,10 @@ func (t *AgentTask) GetEnvs() string {
 	return t.Envs
 }
 
+func (t *AgentTask) GetEnvVars() []string {
+	return nil
+}
+
 func (t *AgentTask) GetLanguages() []map[string]string {
 	return t.Languages
 }

@@ -62,17 +62,17 @@ const (
 
 // ExecutionRequest 执行请求（标准接口）
 type ExecutionRequest struct {
-	TaskID    string                 // 任务 ID
-	LogID     string                 // 日志 ID
-	Name      string                 // 任务名称
-	Type      TaskType               // 任务类型
-	Command   string                 // 命令
-	WorkDir   string                 // 工作目录
-	Envs      []string               // 环境变量
-	Timeout   int                    // 超时时间（分钟）
-	Languages []map[string]string    // 语言环境配置
-	UseMise   bool                   // 是否使用 mise
-	Metadata  ExecutionMetadata      // 额外元数据
+	TaskID    string              // 任务 ID
+	LogID     string              // 日志 ID
+	Name      string              // 任务名称
+	Type      TaskType            // 任务类型
+	Command   string              // 命令
+	WorkDir   string              // 工作目录
+	Envs      []string            // 环境变量
+	Timeout   int                 // 超时时间（分钟）
+	Languages []map[string]string // 语言环境配置
+	UseMise   bool                // 是否使用 mise
+	Metadata  ExecutionMetadata   // 额外元数据
 }
 
 // ExecutionMetadata 执行额外元数据
@@ -403,28 +403,31 @@ func (s *Scheduler) executeTask(req *ExecutionRequest) (*ExecutionResult, error)
 		}
 	}
 
-	// 2. 准备输出缓冲区（使用合并缓冲区保证顺序）
-	var combinedBuf safeBuffer
+	// 2. 准备输出写入器
+	// 注意：对于有 TinyLog 的任务（handler 返回了非 nil 的 stdout/stderr），
+	// 不再使用 combinedBuf 在内存中缓存全部输出副本。
+	// TinyLog 已经将完整输出写入临时文件，OnTaskCompleted 会从那里读取压缩后的数据。
+	// combinedBuf 仅在没有 TinyLog 的场景（系统任务）下使用，作为输出的 fallback。
+	var fallbackBuf *safeBuffer
 	var stdoutWriter, stderrWriter io.Writer
 
 	if stdout != nil && stdout == stderr {
-		// 如果 stdout 和 stderr 是同一个对象，合并成一个 MultiWriter
-		// 这样后面 ExecuteWithHooks 才能识别出它们是同一个，从而开启 PTY 模式
-		mw := io.MultiWriter(&combinedBuf, stdout)
-		stdoutWriter = mw
-		stderrWriter = mw
-	} else {
-		if stdout != nil {
-			stdoutWriter = io.MultiWriter(&combinedBuf, stdout)
-		} else {
-			stdoutWriter = &combinedBuf
-		}
-
+		// 如果 stdout 和 stderr 是同一个对象（TinyLog），直接使用
+		// 这样 ExecuteWithHooks 才能识别出它们是同一个，从而开启 PTY 模式
+		stdoutWriter = stdout
+		stderrWriter = stderr
+	} else if stdout != nil {
+		stdoutWriter = stdout
 		if stderr != nil {
-			stderrWriter = io.MultiWriter(&combinedBuf, stderr)
+			stderrWriter = stderr
 		} else {
-			stderrWriter = &combinedBuf
+			stderrWriter = stdout
 		}
+	} else {
+		// 没有外部 writer（系统任务），使用内存缓冲区
+		fallbackBuf = &safeBuffer{}
+		stdoutWriter = fallbackBuf
+		stderrWriter = fallbackBuf
 	}
 
 	// 3. 实际开始执行事件 (经过队列和速率限制之后)
@@ -460,6 +463,14 @@ func (s *Scheduler) executeTask(req *ExecutionRequest) (*ExecutionResult, error)
 	execResult, execErr := s.executor(ctx, req, stdoutWriter, stderrWriter)
 
 	// 5. 构建结果
+	// 注意：对于普通任务，output 不再在 result 中保留。
+	// OnTaskCompleted 会从 TinyLog 获取压缩后的完整输出。
+	// 仅系统任务（无 TinyLog）使用 fallbackBuf 保存输出。
+	var outputStr string
+	if fallbackBuf != nil {
+		outputStr = fallbackBuf.String()
+	}
+
 	result := &ExecutionResult{
 		TaskID: req.TaskID,
 		LogID:  req.LogID, // 传递 LogID
@@ -467,7 +478,7 @@ func (s *Scheduler) executeTask(req *ExecutionRequest) (*ExecutionResult, error)
 
 	if execResult != nil {
 		result.Success = execResult.Status == constant.TaskStatusSuccess
-		result.Output = combinedBuf.String()
+		result.Output = outputStr
 		result.Status = execResult.Status
 		result.Duration = execResult.Duration
 		result.ExitCode = execResult.ExitCode
@@ -479,7 +490,7 @@ func (s *Scheduler) executeTask(req *ExecutionRequest) (*ExecutionResult, error)
 		result.StartTime = start
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(result.StartTime).Milliseconds()
-		result.Output = combinedBuf.String()
+		result.Output = outputStr
 	}
 
 	if execErr != nil {

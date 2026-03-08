@@ -28,28 +28,28 @@ type RepoConfig struct {
 // TaskConfig  任务配置  RepoConfig+TaskConfig=task.config
 type TaskConfig struct {
 	Concurrency int  `json:"$task_concurrency"` // 0: disable concurrency, 1: enable concurrency
-	AllEnvs     bool `json:"$task_all_envs"`     // 开启则注入全部环境变量
+	AllEnvs     bool `json:"$task_all_envs"`    // 开启则注入全部环境变量
 }
 
 // Task 代表一个计划任务
 type Task struct {
-	ID          string              `json:"id" gorm:"primaryKey;size:20"`
-	Name        string              `json:"name" gorm:"size:255;not null"`
-	Command     string              `json:"command" gorm:"type:text"`                   // 普通任务的命令
-	Tags        string              `json:"tags" gorm:"size:255;default:''"`            // 标签，逗号分隔
-	Type        string              `json:"type" gorm:"size:20;default:'task'"`         // 任务类型: constant.TaskTypeNormal, constant.TaskTypeRepo
-	TriggerType string              `json:"trigger_type" gorm:"size:25;default:'cron'"` // 触发类型: constant.TriggerTypeCron, constant.TriggerTypeBaihuStartup
-	Config      string              `json:"config" gorm:"type:text"`                    // 配置 JSON（仓库同步配置等）
-	Schedule    string              `json:"schedule" gorm:"size:100"`                   // cron 表达式
-	Timeout     int                 `json:"timeout" gorm:"default:30"`                  // 超时时间（分钟），默认30分钟
-	WorkDir     string              `json:"work_dir" gorm:"size:255;default:''"`        // 工作目录，为空则使用 scripts 目录
-	CleanConfig string              `json:"clean_config" gorm:"size:255;default:''"`    // 清理配置 JSON
-	Envs        string              `json:"envs" gorm:"type:text"`            // 环境变量ID列表，逗号分隔
-	Languages   []map[string]string `json:"languages" gorm:"serializer:json;type:text"` // 针对本地任务的语言配置列表
-	AgentID       *string             `json:"agent_id" gorm:"size:20;index"`               // Agent ID，为空表示本地执行
+	ID            string              `json:"id" gorm:"primaryKey;size:20"`
+	Name          string              `json:"name" gorm:"size:255;not null"`
+	Command       string              `json:"command" gorm:"type:text"`                   // 普通任务的命令
+	Tags          string              `json:"tags" gorm:"size:255;default:''"`            // 标签，逗号分隔
+	Type          string              `json:"type" gorm:"size:20;default:'task'"`         // 任务类型: constant.TaskTypeNormal, constant.TaskTypeRepo
+	TriggerType   string              `json:"trigger_type" gorm:"size:25;default:'cron'"` // 触发类型: constant.TriggerTypeCron, constant.TriggerTypeBaihuStartup
+	Config        string              `json:"config" gorm:"type:text"`                    // 配置 JSON（仓库同步配置等）
+	Schedule      string              `json:"schedule" gorm:"size:100"`                   // cron 表达式
+	Timeout       int                 `json:"timeout" gorm:"default:30"`                  // 超时时间（分钟），默认30分钟
+	WorkDir       string              `json:"work_dir" gorm:"size:255;default:''"`        // 工作目录，为空则使用 scripts 目录
+	CleanConfig   string              `json:"clean_config" gorm:"size:255;default:''"`    // 清理配置 JSON
+	Envs          string              `json:"envs" gorm:"type:text"`                      // 环境变量ID列表，逗号分隔
+	Languages     []map[string]string `json:"languages" gorm:"serializer:json;type:text"` // 针对本地任务的语言配置列表
+	AgentID       *string             `json:"agent_id" gorm:"size:20;index"`              // Agent ID，为空表示本地执行
 	RetryCount    int                 `json:"retry_count" gorm:"default:0"`               // 失败重试次数
 	RetryInterval int                 `json:"retry_interval" gorm:"default:0"`            // 失败重试间隔(秒)
-	RandomRange   int                 `json:"random_range" gorm:"default:0"`             // 随机延迟范围(秒)
+	RandomRange   int                 `json:"random_range" gorm:"default:0"`              // 随机延迟范围(秒)
 	Enabled       bool                `json:"enabled" gorm:"default:true"`
 	RunningGo     string              `json:"running_go" gorm:"type:text"` // 正在运行的 go routine id 数组 (JSON)
 	RuntimeEnvs   []string            `json:"-" gorm:"-"`                  // 运行时环境变量（非持久化）
@@ -118,7 +118,7 @@ type TaskLog struct {
 	TaskID    string     `json:"task_id" gorm:"size:20;index"`
 	AgentID   *string    `json:"agent_id" gorm:"size:20;index"` // Agent ID，为空表示本地执行
 	Command   string     `json:"command" gorm:"type:text"`
-	Output    string     `json:"-" gorm:"type:longtext"`      // gzip+base64 压缩后的日志
+	Output    string     `json:"-" gorm:"type:text"`          // gzip+base64 压缩后的日志
 	Error     string     `json:"error" gorm:"type:text"`      // 额外的系统错误信息
 	Status    string     `json:"status" gorm:"size:20;index"` // success, failed
 	Duration  int64      `json:"duration"`                    // 执行耗时（毫秒）

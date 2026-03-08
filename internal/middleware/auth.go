@@ -17,13 +17,7 @@ import (
 
 // AuthRequired 认证中间件
 func AuthRequired() gin.HandlerFunc {
-	settingsSvc := services.NewSettingsService()
 	return func(c *gin.Context) {
-		// 校验 API Token (实验特性)
-		if checkApiToken(c, settingsSvc) {
-			return
-		}
-
 		token, err := c.Cookie(constant.CookieName)
 		if err != nil || token == "" {
 			utils.Unauthorized(c, "请先登录")
@@ -54,56 +48,6 @@ func AuthRequired() gin.HandlerFunc {
 		c.Set("username", user.Username)
 		c.Next()
 	}
-}
-
-// checkApiToken 校验 API Token (实验特性，后续可能移除或重构)
-// 返回 true 表示校验通过并已放行请求
-func checkApiToken(c *gin.Context, settingsSvc *services.SettingsService) bool {
-	apiToken := c.GetHeader("X-API-Token")
-	if apiToken == "" {
-		return false
-	}
-
-	siteConfig := settingsSvc.GetSection(constant.SectionSite)
-	tokenJson, ok := siteConfig[constant.KeyApiToken]
-	if !ok || tokenJson == "" {
-		return false
-	}
-
-	var tokenConfig vo.TokenConfig
-	if err := json.Unmarshal([]byte(tokenJson), &tokenConfig); err != nil {
-		return false
-	}
-
-	if tokenConfig.Token == "" || apiToken != tokenConfig.Token {
-		return false
-	}
-
-	// 检查过期时间
-	if tokenConfig.ExpireAt != "" {
-		// 前端传来的时间格式是 YYYY-MM-DD，使用 2006-01-02 解析
-		expireDate, err := time.Parse("2006-01-02", tokenConfig.ExpireAt)
-		if err == nil {
-			// 将过期时间设为当天的 23:59:59
-			expireDate = expireDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
-			if time.Now().After(expireDate) {
-				return false
-			}
-		}
-	}
-
-	// 模拟 Admin 角色，必须通过实际存在的 admin 用户 ID 来关联
-	var adminUser models.User
-	if err := database.DB.Where("role = ?", "admin").First(&adminUser).Error; err != nil {
-		utils.Unauthorized(c, "未找到管理员账户，API Token 校验失败")
-		c.Abort()
-		return true // 返回 true 表示中间件已处理并截断了请求
-	}
-
-	c.Set("userID", adminUser.ID)
-	c.Set("username", adminUser.Username)
-	c.Next()
-	return true
 }
 
 // OpenapiRequired OpenAPI 认证中间件

@@ -42,7 +42,6 @@ const (
 	KeyIcon         = "icon"
 	KeyPageSize     = "page_size"
 	KeyCookieDays   = "cookie_days"
-	KeyApiToken     = "api_token"
 	KeyOpenapiToken = "openapi_token"
 
 	// Security Settings Key 常量

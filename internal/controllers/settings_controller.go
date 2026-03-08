@@ -89,15 +89,6 @@ func (sc *SettingsController) ChangePassword(c *gin.Context) {
 func (sc *SettingsController) GetSiteSettings(c *gin.Context) {
 	settings := sc.settingsService.GetSection(constant.SectionSite)
 
-	// 解析 JSON 格式的 API Token
-	if tokenJson, ok := settings[constant.KeyApiToken]; ok && tokenJson != "" {
-		var tokenConfig vo.TokenConfig
-		if err := json.Unmarshal([]byte(tokenJson), &tokenConfig); err == nil {
-			settings["api_token"] = tokenConfig.Token
-			settings["api_token_expire"] = tokenConfig.ExpireAt
-		}
-	}
-
 	// 解析 JSON 格式的 OpenAPI Token
 	if tokenJson, ok := settings[constant.KeyOpenapiToken]; ok && tokenJson != "" {
 		var tokenConfig vo.TokenConfig
@@ -135,8 +126,6 @@ func (sc *SettingsController) UpdateSiteSettings(c *gin.Context) {
 		Icon               string `json:"icon"`
 		PageSize           string `json:"page_size"`
 		CookieDays         string `json:"cookie_days"`
-		ApiToken           string `json:"api_token"`
-		ApiTokenExpire     string `json:"api_token_expire"`
 		OpenapiEnabled     bool   `json:"openapi_enabled"`
 		OpenapiToken       string `json:"openapi_token"`
 		OpenapiTokenExpire string `json:"openapi_token_expire"`
@@ -145,17 +134,6 @@ func (sc *SettingsController) UpdateSiteSettings(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequest(c, "参数错误")
 		return
-	}
-
-	apiTokenJson := ""
-	if req.ApiToken != "" || req.ApiTokenExpire != "" {
-		tokenConfig := vo.TokenConfig{
-			Token:    req.ApiToken,
-			ExpireAt: req.ApiTokenExpire,
-		}
-		if b, err := json.Marshal(tokenConfig); err == nil {
-			apiTokenJson = string(b)
-		}
 	}
 
 	openapiTokenJson := ""
@@ -176,7 +154,6 @@ func (sc *SettingsController) UpdateSiteSettings(c *gin.Context) {
 		constant.KeyIcon:         req.Icon,
 		constant.KeyPageSize:     req.PageSize,
 		constant.KeyCookieDays:   req.CookieDays,
-		constant.KeyApiToken:     apiTokenJson,
 		constant.KeyOpenapiToken: openapiTokenJson,
 	}
 
@@ -186,13 +163,6 @@ func (sc *SettingsController) UpdateSiteSettings(c *gin.Context) {
 	}
 
 	utils.SuccessMsg(c, "保存成功")
-}
-
-// GenerateApiToken 随机生成API Token
-func (sc *SettingsController) GenerateApiToken(c *gin.Context) {
-	utils.Success(c, gin.H{
-		"token": strings.ToLower(utils.RandomString(32)),
-	})
 }
 
 // GenerateOpenapiToken 随机生成OpenAPI Token

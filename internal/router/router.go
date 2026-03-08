@@ -343,7 +343,6 @@ func registerSettingsRoutes(g *gin.RouterGroup, c *Controllers) {
 		settings.POST("/password", c.Settings.ChangePassword)
 		settings.GET("/site", c.Settings.GetSiteSettings)
 		settings.PUT("/site", c.Settings.UpdateSiteSettings)
-		settings.POST("/site/api-token/generate", c.Settings.GenerateApiToken)
 		settings.POST("/site/openapi-token/generate", c.Settings.GenerateOpenapiToken)
 		settings.GET("/paths", c.Settings.GetPaths)
 		settings.GET("/scheduler", c.Settings.GetSchedulerSettings)

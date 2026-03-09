@@ -119,6 +119,7 @@ const (
 	LogCategoryDefault      = "default"
 	LogCategorySystemNotice = "system_notice"
 	LogCategoryPushLog      = "push_log"
+	LogCategoryLoginLog     = "login_log"
 
 	// AppLog 级别
 	LogLevelInfo    = "info"

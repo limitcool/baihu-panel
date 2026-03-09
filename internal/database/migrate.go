@@ -21,7 +21,6 @@ func Migrate() error {
 		&models.Script{},
 		&models.EnvironmentVariable{},
 		&models.Setting{},
-		&models.LoginLog{},
 		&models.SendStats{},
 		&models.Dependency{},
 		&models.Agent{},

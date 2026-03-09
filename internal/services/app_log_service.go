@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"fmt"
+
 	"github.com/engigu/baihu-panel/internal/constant"
 	"github.com/engigu/baihu-panel/internal/database"
 	"github.com/engigu/baihu-panel/internal/eventbus"
@@ -185,40 +186,42 @@ func (s *AppLogService) SubscribeEvents(bus *eventbus.EventBus) {
 	})
 
 	// 3. 将某些业务事件转化为系统内部通知 (自动出现在小铃铛)
-	bus.Subscribe(constant.EventTaskFailed, func(e eventbus.Event) {
-		payload, ok := e.Payload.(map[string]interface{})
-		if !ok {
-			return
-		}
-		taskName, _ := payload["task_name"].(string)
-		errMsg, _ := payload["error"].(string)
+	/*
+		bus.Subscribe(constant.EventTaskFailed, func(e eventbus.Event) {
+			payload, ok := e.Payload.(map[string]interface{})
+			if !ok {
+				return
+			}
+			taskName, _ := payload["task_name"].(string)
+			errMsg, _ := payload["error"].(string)
 
-		bus.Publish(eventbus.Event{
-			Type: constant.EventSystemNotice,
-			Payload: map[string]interface{}{
-				"title":   fmt.Sprintf("任务 [%s] 执行失败", taskName),
-				"content": fmt.Sprintf("错误详情: %s", errMsg),
-				"level":   constant.LogLevelError,
-			},
+			bus.Publish(eventbus.Event{
+				Type: constant.EventSystemNotice,
+				Payload: map[string]interface{}{
+					"title":   fmt.Sprintf("任务 [%s] 执行失败", taskName),
+					"content": fmt.Sprintf("错误详情: %s", errMsg),
+					"level":   constant.LogLevelError,
+				},
+			})
 		})
-	})
 
-	bus.Subscribe(constant.EventTaskTimeout, func(e eventbus.Event) {
-		payload, ok := e.Payload.(map[string]interface{})
-		if !ok {
-			return
-		}
-		taskName, _ := payload["task_name"].(string)
+		bus.Subscribe(constant.EventTaskTimeout, func(e eventbus.Event) {
+			payload, ok := e.Payload.(map[string]interface{})
+			if !ok {
+				return
+			}
+			taskName, _ := payload["task_name"].(string)
 
-		bus.Publish(eventbus.Event{
-			Type: constant.EventSystemNotice,
-			Payload: map[string]interface{}{
-				"title":   fmt.Sprintf("任务 [%s] 执行超时", taskName),
-				"content": "任务已经超过预设的运行时间并被系统强制中止。",
-				"level":   constant.LogLevelWarning,
-			},
+			bus.Publish(eventbus.Event{
+				Type: constant.EventSystemNotice,
+				Payload: map[string]interface{}{
+					"title":   fmt.Sprintf("任务 [%s] 执行超时", taskName),
+					"content": "任务已经超过预设的运行时间并被系统强制中止。",
+					"level":   constant.LogLevelWarning,
+				},
+			})
 		})
-	})
+	*/
 
 	bus.Subscribe(constant.EventPasswordChanged, func(e eventbus.Event) {
 		payload, ok := e.Payload.(map[string]interface{})

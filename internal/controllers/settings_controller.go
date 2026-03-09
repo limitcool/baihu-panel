@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"time"
+
 	"github.com/engigu/baihu-panel/internal/constant"
 	"github.com/engigu/baihu-panel/internal/database"
 	"github.com/engigu/baihu-panel/internal/eventbus"
@@ -143,18 +144,18 @@ func (sc *SettingsController) GetPublicSiteSettings(c *gin.Context) {
 // UpdateSiteSettings 更新站点设置
 func (sc *SettingsController) UpdateSiteSettings(c *gin.Context) {
 	var req struct {
-		Title                     string `json:"title"`
-		Subtitle                  string `json:"subtitle"`
-		Icon                      string `json:"icon"`
-		PageSize                  string `json:"page_size"`
-		CookieDays                string `json:"cookie_days"`
-		OpenapiEnabled            bool   `json:"openapi_enabled"`
-		OpenapiToken              string `json:"openapi_token"`
-		OpenapiTokenExpire        string `json:"openapi_token_expire"`
-		SystemNoticeDays          int    `json:"system_notice_days"`
-		SystemNoticeMaxCount      int    `json:"system_notice_max_count"`
-		PushLogDays               int    `json:"push_log_days"`
-		PushLogMaxCount           int    `json:"push_log_max_count"`
+		Title                string `json:"title"`
+		Subtitle             string `json:"subtitle"`
+		Icon                 string `json:"icon"`
+		PageSize             string `json:"page_size"`
+		CookieDays           string `json:"cookie_days"`
+		OpenapiEnabled       bool   `json:"openapi_enabled"`
+		OpenapiToken         string `json:"openapi_token"`
+		OpenapiTokenExpire   string `json:"openapi_token_expire"`
+		SystemNoticeDays     int    `json:"system_notice_days"`
+		SystemNoticeMaxCount int    `json:"system_notice_max_count"`
+		PushLogDays          int    `json:"push_log_days"`
+		PushLogMaxCount      int    `json:"push_log_max_count"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -341,8 +342,22 @@ func (sc *SettingsController) GetLoginLogs(c *gin.Context) {
 		return
 	}
 
+	// 将 AppLog 转换为 LoginLogVO 返回，保持前端兼容性
+	vos := make([]*vo.LoginLogVO, len(logs))
+	for i, log := range logs {
+		vos[i] = &vo.LoginLogVO{
+			ID:        log.ID,
+			Username:  log.Title,
+			IP:        log.RefID,
+			UserAgent: string(log.Content),
+			Status:    log.Status,
+			Message:   string(log.ErrorMsg),
+			CreatedAt: log.CreatedAt,
+		}
+	}
+
 	utils.Success(c, utils.PaginationData{
-		Data:     vo.ToLoginLogVOListFromModels(logs),
+		Data:     vos,
 		Total:    total,
 		Page:     page,
 		PageSize: pageSize,

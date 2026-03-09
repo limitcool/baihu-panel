@@ -50,7 +50,7 @@ func (s *BackupService) getTableConfigs() []tableConfig {
 		{"scripts.json", s.exportTable(&[]models.Script{}, true), s.restoreTable(&[]models.Script{}, true)},
 		{"settings.json", s.exportSettings, s.restoreSettings},
 		{"send_stats.json", s.exportTable(&[]models.SendStats{}, false), s.restoreTable(&[]models.SendStats{}, false)},
-		{"login_logs.json", s.exportTable(&[]models.LoginLog{}, false), s.restoreTable(&[]models.LoginLog{}, false)},
+
 		{"agents.json", s.exportTable(&[]models.Agent{}, true), s.restoreTable(&[]models.Agent{}, true)},
 		{"tokens.json", s.exportTable(&[]models.AgentToken{}, true), s.restoreTable(&[]models.AgentToken{}, true)},
 		{"languages.json", s.exportTable(&[]models.Language{}, true), s.restoreTable(&[]models.Language{}, true)},
@@ -229,7 +229,7 @@ func (s *BackupService) Restore(zipPath string) error {
 		tx.Unscoped().Where("1=1").Delete(&models.Script{})
 		tx.Unscoped().Where("section != ?", BackupSection).Delete(&models.Setting{})
 		tx.Unscoped().Where("1=1").Delete(&models.SendStats{})
-		tx.Unscoped().Where("1=1").Delete(&models.LoginLog{})
+
 		tx.Unscoped().Where("1=1").Delete(&models.Agent{})
 		tx.Unscoped().Where("1=1").Delete(&models.AgentToken{})
 		tx.Unscoped().Where("1=1").Delete(&models.Language{})
@@ -328,8 +328,7 @@ func (s *BackupService) restoreFromZipFile(tx *gorm.DB, f *zip.File, filename st
 		return restoreStreamBatch[models.Script](tx, decoder)
 	case "send_stats.json":
 		return restoreStreamBatch[models.SendStats](tx, decoder)
-	case "login_logs.json":
-		return restoreStreamBatch[models.LoginLog](tx, decoder)
+
 	case "agents.json":
 		return restoreStreamBatch[models.Agent](tx, decoder)
 	case "tokens.json":

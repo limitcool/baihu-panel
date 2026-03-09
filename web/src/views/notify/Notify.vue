@@ -17,7 +17,6 @@ import ChannelList from './components/ChannelList.vue'
 import EventBinding from './components/EventBinding.vue'
 import ApiUsage from './components/ApiUsage.vue'
 import ChannelDialog from './components/ChannelDialog.vue'
-import PushLog from './components/PushLog.vue'
 
 const activeTab = ref('channels')
 
@@ -323,11 +322,10 @@ onMounted(() => {
           <h2 class="text-xl sm:text-2xl font-bold tracking-tight">消息推送</h2>
           <p class="text-muted-foreground text-sm">配置通知渠道，绑定系统事件实现自动推送</p>
         </div>
-        <TabsList class="w-full sm:w-auto grid grid-cols-4 sm:inline-flex h-9 gap-1 p-1">
-          <TabsTrigger value="channels" class="text-xs px-3 py-1">渠道管理</TabsTrigger>
-          <TabsTrigger value="events" class="text-xs px-3 py-1">事件绑定</TabsTrigger>
-          <TabsTrigger value="logs" class="text-xs px-3 py-1">推送日志</TabsTrigger>
-          <TabsTrigger value="api" class="text-xs px-3 py-1">脚本调用</TabsTrigger>
+        <TabsList class="grid grid-cols-3 w-full sm:w-auto min-w-[300px]">
+          <TabsTrigger value="channels">渠道管理</TabsTrigger>
+          <TabsTrigger value="events">事件绑定</TabsTrigger>
+          <TabsTrigger value="api">脚本调用</TabsTrigger>
         </TabsList>
       </div>
 
@@ -349,10 +347,7 @@ onMounted(() => {
           @generate-token="generateApiToken" @copy-token="copyApiToken" @copy-example="copyApiExample" />
       </TabsContent>
 
-      <!-- 推送日志 -->
-      <TabsContent value="logs">
-        <PushLog />
-      </TabsContent>
+
     </Tabs>
 
     <!-- 添加/编辑渠道弹窗 -->

@@ -167,7 +167,8 @@ function onDialogClose(open: boolean) {
             </SelectContent>
           </Select>
         </div>
-        <Button variant="outline" size="icon" class="h-9 w-9 shrink-0" @click="fetchLogs" :disabled="loading" title="刷新">
+        <Button variant="outline" size="icon" class="h-9 w-9 shrink-0" @click="fetchLogs" :disabled="loading"
+          title="刷新">
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
         </Button>
       </div>
@@ -188,7 +189,7 @@ function onDialogClose(open: boolean) {
         <span class="w-10 sm:w-16 shrink-0 text-center">状态</span>
         <span class="shrink-0 w-24 sm:w-40 sm:text-right">发送时间</span>
       </div>
-      
+
       <!-- 列表 -->
       <div class="divide-y sm:min-w-[700px]">
         <div v-if="logs.length === 0 && !loading" class="text-sm text-muted-foreground text-center py-8">
@@ -196,22 +197,23 @@ function onDialogClose(open: boolean) {
         </div>
         <div v-for="(log, index) in logs" :key="log.id"
           class="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer group"
-          :class="[selectedLogId === log.id && 'bg-accent/50']"
-          @click="showDetail(log)">
+          :class="[selectedLogId === log.id && 'bg-accent/50']" @click="showDetail(log)">
           <span class="w-12 sm:w-16 shrink-0 text-muted-foreground text-xs sm:text-sm">#{{ getLogIndex(index) }}</span>
-          <span class="w-40 sm:w-56 shrink-0 font-medium text-xs sm:text-sm truncate" :title="log.title">{{ log.title }}</span>
+          <span class="w-40 sm:w-56 shrink-0 font-medium text-xs sm:text-sm truncate" :title="log.title">{{ log.title
+            }}</span>
           <span class="hidden sm:flex sm:flex-1 text-xs sm:text-sm text-muted-foreground truncate" :title="log.content">
             {{ log.content || '-' }}
           </span>
           <span class="w-10 sm:w-16 shrink-0 flex justify-center">
-            <span :class="['h-2 w-2 rounded-full', log.status === LOG_STATUS.SUCCESS ? 'bg-green-500' : 'bg-red-500']"></span>
+            <span
+              :class="['h-2 w-2 rounded-full', log.status === LOG_STATUS.SUCCESS ? 'bg-green-500' : 'bg-red-500']"></span>
           </span>
           <span class="shrink-0 w-24 sm:w-40 sm:text-right text-xs text-muted-foreground">
             {{ formatDate(log.created_at) }}
           </span>
         </div>
       </div>
-      
+
       <!-- 分页 -->
       <Pagination :total="total" :page="filters.page" @update:page="handlePageChange" />
     </div>
@@ -233,7 +235,7 @@ function onDialogClose(open: boolean) {
             </Badge>
           </div>
         </DialogHeader>
-        
+
         <div class="flex-1 overflow-y-auto">
           <!-- 基础信息区 -->
           <div class="px-6 py-4 border-b space-y-3 bg-card">
@@ -243,27 +245,31 @@ function onDialogClose(open: boolean) {
             </div>
             <div class="flex justify-between items-center text-sm">
               <span class="text-muted-foreground">发生时间</span>
-              <span class="font-mono text-xs text-muted-foreground">{{ selectedLog ? formatDate(selectedLog.created_at) : '-' }}</span>
+              <span class="font-mono text-xs text-muted-foreground">{{ selectedLog ? formatDate(selectedLog.created_at)
+                : '-' }}</span>
             </div>
           </div>
 
           <!-- 内容输出区 -->
           <div class="flex flex-col min-h-0 bg-muted/5">
-            <div class="px-6 py-2.5 text-xs font-semibold text-muted-foreground border-b bg-muted/10 uppercase tracking-wider">
+            <div
+              class="px-6 py-2.5 text-xs font-semibold text-muted-foreground border-b bg-muted/10 uppercase tracking-wider">
               推送内容
             </div>
             <div class="p-6">
-              <pre v-if="detailDialogProps.content" 
+              <pre v-if="detailDialogProps.content"
                 class="text-xs font-mono bg-muted/30 p-4 rounded-lg border border-muted/50 whitespace-pre-wrap break-all leading-relaxed shadow-inner">{{ detailDialogProps.content }}</pre>
               <div v-else class="text-xs text-muted-foreground italic py-2">无推送内容</div>
             </div>
 
             <template v-if="detailDialogProps.error">
-              <div class="px-6 py-2.5 text-xs font-semibold text-red-500 border-y bg-red-500/5 uppercase tracking-wider">
+              <div
+                class="px-6 py-2.5 text-xs font-semibold text-red-500 border-y bg-red-500/5 uppercase tracking-wider">
                 错误信息
               </div>
               <div class="p-6">
-                <pre class="text-xs font-mono bg-red-500/5 text-red-600/90 p-4 rounded-lg border border-red-500/20 whitespace-pre-wrap break-all leading-relaxed shadow-inner">{{ detailDialogProps.error }}</pre>
+                <pre
+                  class="text-xs font-mono bg-red-500/5 text-red-600/90 p-4 rounded-lg border border-red-500/20 whitespace-pre-wrap break-all leading-relaxed shadow-inner">{{ detailDialogProps.error }}</pre>
               </div>
             </template>
           </div>

@@ -88,25 +88,30 @@ function getLevelColor(level: string) {
     <PopoverTrigger asChild>
       <Button variant="ghost" size="icon" class="relative">
         <Bell class="h-5 w-5" />
-        <span v-if="unreadCount > 0" class="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+        <span v-if="unreadCount > 0"
+          class="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
       </Button>
     </PopoverTrigger>
     <PopoverContent class="w-80 p-0" align="end">
       <div class="flex items-center justify-between px-4 py-3 border-b">
-        <span class="font-medium text-sm">系统通知 <span class="text-xs text-muted-foreground ml-1" v-if="unreadCount">({{ unreadCount }})</span></span>
-        <Button variant="ghost" size="sm" class="h-auto p-0 text-xs text-muted-foreground hover:text-foreground" :disabled="loading || unreadCount === 0" @click="markAllAsRead">
+        <span class="font-medium text-sm">系统通知 <span class="text-xs text-muted-foreground ml-1" v-if="unreadCount">({{
+            unreadCount }})</span></span>
+        <Button variant="ghost" size="sm" class="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+          :disabled="loading || unreadCount === 0" @click="markAllAsRead">
           <Check class="h-3 w-3 mr-1" />
           全标已读
         </Button>
       </div>
-      
+
       <ScrollArea class="h-[300px]" v-if="notices.length > 0">
         <div class="flex flex-col">
-          <div v-for="notice in notices" :key="notice.id" class="p-4 border-b last:border-0 hover:bg-muted/50 transition-colors group relative">
+          <div v-for="notice in notices" :key="notice.id"
+            class="p-4 border-b last:border-0 hover:bg-muted/50 transition-colors group relative">
             <div class="flex items-start justify-between gap-2 mb-1 cursor-pointer" @click="markAsRead(notice.id)">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
-                  <Badge :variant="getLevelColor(notice.level) as any" class="px-1.5 py-0 text-[10px]">{{ notice.level || 'info' }}</Badge>
+                  <Badge :variant="getLevelColor(notice.level) as any" class="px-1.5 py-0 text-[10px]">{{ notice.level
+                    || 'info' }}</Badge>
                   <span class="text-sm font-medium truncate">{{ notice.title }}</span>
                 </div>
                 <p class="text-xs text-muted-foreground line-clamp-2">{{ notice.content }}</p>

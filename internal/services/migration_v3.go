@@ -32,7 +32,6 @@ func getMigrationTables() []MigrationTable {
 		{&models.Script{}, "scripts", map[string]string{"UserID": "users"}, nil},
 		{&models.Setting{}, "settings", nil, nil},
 		{&models.SendStats{}, "send_stats", map[string]string{"TaskID": "tasks"}, nil},
-		{&models.LoginLog{}, "login_logs", nil, nil},
 		{&models.Language{}, "languages", nil, nil},
 		{&models.Dependency{}, "deps", nil, nil},
 	}

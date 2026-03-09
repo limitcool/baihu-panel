@@ -2,6 +2,8 @@ package services
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/engigu/baihu-panel/internal/constant"
 	"github.com/engigu/baihu-panel/internal/database"
 	"github.com/engigu/baihu-panel/internal/eventbus"
@@ -17,13 +19,19 @@ func NewLoginLogService() *LoginLogService {
 
 // Create 创建登录日志
 func (s *LoginLogService) Create(username, ip, userAgent, status, message string) error {
-	log := &models.LoginLog{
-		ID:        utils.GenerateID(),
-		Username:  username,
-		IP:        ip,
-		UserAgent: userAgent,
-		Status:    status,
-		Message:   message,
+	level := constant.LogLevelInfo
+	if status != "success" {
+		level = constant.LogLevelWarning
+	}
+	log := &models.AppLog{
+		ID:       utils.GenerateID(),
+		Category: constant.LogCategoryLoginLog,
+		Title:    username,
+		Content:  models.BigText(userAgent),
+		Level:    level,
+		Status:   status,
+		RefID:    ip,
+		ErrorMsg: models.BigText(message),
 	}
 	return database.DB.Create(log).Error
 }
@@ -84,13 +92,13 @@ func (s *LoginLogService) SubscribeEvents(bus *eventbus.EventBus) {
 }
 
 // List 获取登录日志列表
-func (s *LoginLogService) List(page, pageSize int, username string) ([]models.LoginLog, int64, error) {
-	var logs []models.LoginLog
+func (s *LoginLogService) List(page, pageSize int, username string) ([]models.AppLog, int64, error) {
+	var logs []models.AppLog
 	var total int64
 
-	query := database.DB.Model(&models.LoginLog{})
+	query := database.DB.Model(&models.AppLog{}).Where("category = ?", constant.LogCategoryLoginLog)
 	if username != "" {
-		query = query.Where("username LIKE ?", "%"+username+"%")
+		query = query.Where("title LIKE ?", "%"+username+"%")
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -107,6 +115,7 @@ func (s *LoginLogService) List(page, pageSize int, username string) ([]models.Lo
 
 // CleanOldLogs 清理指定天数前的日志
 func (s *LoginLogService) CleanOldLogs(days int) (int64, error) {
-	result := database.DB.Exec("DELETE FROM "+models.LoginLog{}.TableName()+" WHERE created_at < datetime('now', ?)", "-"+string(rune(days))+" days")
+	deadline := time.Now().AddDate(0, 0, -days)
+	result := database.DB.Unscoped().Where("category = ? AND created_at < ?", constant.LogCategoryLoginLog, deadline).Delete(&models.AppLog{})
 	return result.RowsAffected, result.Error
 }

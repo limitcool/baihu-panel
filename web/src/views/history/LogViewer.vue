@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { watch, onUnmounted } from 'vue'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { X, Search } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
+import LogTerminal from '@/components/LogTerminal.vue'
+import { useTheme } from '@/composables/useTheme'
+
+const { resolvedTheme } = useTheme()
 
 const props = defineProps<{
   open: boolean
@@ -15,17 +18,8 @@ const emit = defineEmits<{
   'update:open': [value: boolean]
 }>()
 
-const searchKeyword = ref('')
-
-// 高亮搜索结果
-const highlightedContent = computed(() => {
-  if (!searchKeyword.value.trim()) return props.content
-
-  const keyword = searchKeyword.value.trim()
-  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const regex = new RegExp(`(${escaped})`, 'gi')
-  return props.content.replace(regex, '<mark class="bg-yellow-300 text-black">$1</mark>')
-})
+const lightLogBackgroundClass = 'bg-zinc-100'
+const darkLogBackgroundClass = 'bg-zinc-950'
 
 function close() {
   emit('update:open', false)
@@ -43,7 +37,6 @@ function toggleBodyScroll(lock: boolean) {
 // 监听打开状态
 watch(() => props.open, (val) => {
   if (val) {
-    searchKeyword.value = ''
     toggleBodyScroll(true)
   } else {
     toggleBodyScroll(false)
@@ -80,17 +73,17 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <div class="relative flex-1 sm:flex-none">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input v-model="searchKeyword" placeholder="搜索内容..." class="h-8 pl-9 w-full sm:w-56 text-sm" />
-            </div>
             <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" @click="close">
               <X class="h-4 w-4" />
             </Button>
           </div>
         </div>
-        <div class="flex-1 overflow-auto bg-black/5 dark:bg-white/5">
-          <pre class="p-3 sm:p-4 text-xs font-mono whitespace-pre-wrap break-all" v-html="highlightedContent"></pre>
+        <div class="flex-1 overflow-hidden relative"
+          :class="resolvedTheme === 'dark' ? darkLogBackgroundClass : lightLogBackgroundClass">
+          <LogTerminal v-if="content" :content="content" :theme="resolvedTheme" />
+          <div v-else class="absolute inset-0 flex items-center justify-center text-zinc-500 font-mono text-sm italic">
+            无日志输出
+          </div>
         </div>
       </div>
     </div>

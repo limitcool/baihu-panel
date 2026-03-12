@@ -298,12 +298,12 @@ function onDialogClose(open: boolean) {
 
                         <template v-if="detailDialogProps.error">
                             <div
-                                class="px-6 py-2.5 text-xs font-semibold text-red-500 border-y bg-red-500/5 uppercase tracking-wider">
+                                class="px-6 py-2.5 text-xs font-semibold uppercase tracking-wider border-y bg-muted/10 text-muted-foreground border-border/60">
                                 错误信息
                             </div>
                             <div class="p-6">
                                 <div v-if="detailDialogProps.error"
-                                    class="text-sm text-red-700 bg-red-500/10 p-5 rounded-xl border border-red-200/50 whitespace-pre-wrap break-all leading-relaxed shadow-sm">
+                                    class="text-sm p-5 rounded-xl border whitespace-pre-wrap break-all leading-relaxed shadow-sm bg-muted/20 border-border/60 text-foreground">
                                     {{ detailDialogProps.error }}
                                 </div>
                                 <div v-else class="text-sm text-muted-foreground italic py-2">无错误信息</div>

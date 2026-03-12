@@ -3,7 +3,6 @@ package tasks
 import (
 	"bufio"
 	"bytes"
-	"compress/zlib"
 	"encoding/base64"
 	"io"
 	"os"
@@ -225,15 +224,18 @@ func (l *TinyLog) CompressAndCleanup() (string, error) {
 	// 创建压缩输出缓冲区
 	var buf bytes.Buffer
 	b64Writer := base64.NewEncoder(base64.StdEncoding, &buf)
-	zlibWriter := zlib.NewWriter(b64Writer)
+
+	// 使用 Pool 优化压缩
+	zw := utils.GetZlibWriter(b64Writer)
+	defer utils.PutZlibWriter(zw)
 
 	// 流处理: 文件 -> Zlib -> Base64 -> 缓冲区
-	if _, err := io.Copy(zlibWriter, f); err != nil {
+	if _, err := io.Copy(zw, f); err != nil {
 		return "", err
 	}
 
 	// 关闭写入器以刷新数据
-	if err := zlibWriter.Close(); err != nil {
+	if err := zw.Close(); err != nil {
 		return "", err
 	}
 	if err := b64Writer.Close(); err != nil {

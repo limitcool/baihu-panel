@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Pagination from '@/components/Pagination.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import LogViewer from './LogViewer.vue'
 import {
   RefreshCw, X, Search, Maximize2, GitBranch, Terminal,
   CheckCircle2, XCircle, AlertCircle, Ban, Clock, Zap as ZapIcon, Check, Trash2
 } from 'lucide-vue-next'
+import LogViewer from './LogViewer.vue'
+import LogTerminal from '@/components/LogTerminal.vue'
 import { api, type TaskLog } from '@/api'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -26,6 +27,7 @@ import {
 import { toast } from 'vue-sonner'
 import { useSiteSettings } from '@/composables/useSiteSettings'
 import TextOverflow from '@/components/TextOverflow.vue'
+import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
 const { pageSize } = useSiteSettings()
@@ -55,9 +57,10 @@ const wsContent = ref('')
 const isWsLoading = ref(false)
 let logSocket: WebSocket | null = null
 
+const { resolvedTheme } = useTheme()
 
 const decompressedOutput = computed(() => {
-  return wsContent.value || '无输出'
+  return wsContent.value
 })
 
 async function loadLogs() {
@@ -385,7 +388,7 @@ watch(() => route.query, (newQuery) => {
             <!-- 小屏行 -->
             <div class="flex sm:hidden items-center gap-2 px-3 py-2">
               <span class="w-14 shrink-0 text-muted-foreground text-xs">#{{ total - (currentPage - 1) * pageSize - index
-              }}</span>
+                }}</span>
               <span class="w-6 shrink-0 flex justify-center" :title="getTaskTypeTitle(log.task_type || 'task')">
                 <GitBranch v-if="log.task_type === TASK_TYPE.REPO" class="h-3.5 w-3.5 text-primary" />
                 <Terminal v-else class="h-3.5 w-3.5 text-primary" />
@@ -418,7 +421,7 @@ watch(() => route.query, (newQuery) => {
                 </div>
               </span>
               <span class="w-12 text-right shrink-0 text-muted-foreground text-xs">{{ formatDuration(log.duration)
-              }}</span>
+                }}</span>
               <span class="w-8 shrink-0 flex justify-center opacity-100">
                 <Button variant="ghost" size="icon"
                   class="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
@@ -430,7 +433,7 @@ watch(() => route.query, (newQuery) => {
             <!-- 大屏行 -->
             <div class="hidden sm:flex items-center gap-4 px-4 py-2">
               <span class="w-16 shrink-0 text-muted-foreground text-sm">#{{ total - (currentPage - 1) * pageSize - index
-              }}</span>
+                }}</span>
               <span class="w-10 shrink-0 flex justify-center" :title="getTaskTypeTitle(log.task_type || 'task')">
                 <GitBranch v-if="log.task_type === TASK_TYPE.REPO" class="h-4 w-4 text-primary" />
                 <Terminal v-else class="h-4 w-4 text-primary" />
@@ -466,7 +469,7 @@ watch(() => route.query, (newQuery) => {
                 </div>
               </span>
               <span class="w-16 text-right shrink-0 text-muted-foreground text-xs">{{ formatDuration(log.duration)
-              }}</span>
+                }}</span>
               <span v-if="!selectedLog"
                 class="w-40 text-right shrink-0 text-muted-foreground text-xs hidden md:block">{{ log.start_time ||
                   log.created_at }}</span>
@@ -564,10 +567,17 @@ watch(() => route.query, (newQuery) => {
               <Maximize2 class="h-3.5 w-3.5" />
             </Button>
           </div>
-          <div class="flex-1 overflow-auto bg-muted/5 min-h-[160px]">
-            <pre
-              class="p-4 text-xs font-mono whitespace-pre-wrap break-all log-pre leading-relaxed">{{ decompressedOutput }}</pre>
-            <div v-if="isWsLoading" class="p-4 text-sm text-muted-foreground italic">连接中...</div>
+          <div class="flex-1 overflow-hidden min-h-[160px] relative"
+            :class="resolvedTheme === 'dark' ? 'bg-zinc-950' : 'bg-zinc-100'" ref="sideLogContainer">
+            <LogTerminal v-if="decompressedOutput" :content="decompressedOutput" :theme="resolvedTheme" />
+            <div v-else-if="!isWsLoading"
+              class="absolute inset-0 flex items-center justify-center text-zinc-500 font-mono text-xs italic">
+              无日志输出
+            </div>
+            <div v-if="isWsLoading"
+              class="px-4 py-2 text-sm text-zinc-500 italic border-t border-zinc-200 dark:border-zinc-800 absolute bottom-0 left-0 w-full bg-inherit/80 backdrop-blur-sm">
+              连接中...
+            </div>
           </div>
         </div>
       </div>

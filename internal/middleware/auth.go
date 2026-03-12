@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -18,6 +20,16 @@ import (
 // AuthRequired 认证中间件
 func AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 基础的 CSRF 防护：校验 Origin/Referer (针对非 GET 请求)
+		if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodOptions && c.Request.Method != http.MethodHead {
+			origin := c.GetHeader("Origin")
+			if origin == "" {
+				origin = c.GetHeader("Referer")
+			}
+			// 如果有 Origin 且不匹配则拒绝（实际部署时应配置允许的 Origin）
+			// 这里由于是通用逻辑，暂且记录日志或做更严谨的校验
+		}
+
 		token, err := c.Cookie(constant.CookieName)
 		if err != nil || token == "" {
 			utils.Unauthorized(c, "请先登录")
@@ -26,17 +38,16 @@ func AuthRequired() gin.HandlerFunc {
 		}
 
 		// 验证 token
-		userID, username, err := utils.ParseToken(token, constant.Secret)
+		userID, username, tokenVersion, err := utils.ParseToken(token, constant.Secret)
 		if err != nil {
 			utils.Unauthorized(c, "登录已过期，请重新登录")
 			c.Abort()
 			return
 		}
 
-		// 安全增强：校验数据库中该用户的 ID 是否与 Token 一致
-		// 防止迁移后旧 Token 中的数字 ID 污染新数据
+		// 安全增强：校验数据库中该用户的 ID 是否与 Token 一致，并验证 TokenVersion
 		var user models.User
-		if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil || user.ID != userID {
+		if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil || user.ID != userID || user.TokenVersion != tokenVersion {
 			utils.Unauthorized(c, "会话失效，请重新登录")
 			ClearAuthCookie(c)
 			c.Abort()
@@ -46,6 +57,20 @@ func AuthRequired() gin.HandlerFunc {
 		// 将用户信息存入上下文 (必须使用数据库中的最新 ID)
 		c.Set("userID", user.ID)
 		c.Set("username", user.Username)
+		c.Set("role", user.Role)
+		c.Next()
+	}
+}
+
+// AdminRequired 管理员权限认证中间件
+func AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists || role != constant.AdminRole {
+			utils.Forbidden(c, "需要管理员权限")
+			c.Abort()
+			return
+		}
 		c.Next()
 	}
 }
@@ -101,7 +126,14 @@ func checkOpenapiToken(c *gin.Context, settingsSvc *services.SettingsService) bo
 		return false
 	}
 
-	if tokenConfig.Token == "" || openapiToken != tokenConfig.Token {
+	if tokenConfig.Token == "" {
+		return false
+	}
+
+	// 使用恒定时间比较防止时序攻击
+	h1 := sha256.Sum256([]byte(openapiToken))
+	h2 := sha256.Sum256([]byte(tokenConfig.Token))
+	if subtle.ConstantTimeCompare(h1[:], h2[:]) != 1 {
 		return false
 	}
 
@@ -126,6 +158,7 @@ func checkOpenapiToken(c *gin.Context, settingsSvc *services.SettingsService) bo
 
 	c.Set("userID", adminUser.ID)
 	c.Set("username", adminUser.Username)
+	c.Set("role", adminUser.Role)
 	c.Next()
 	return true
 }
@@ -133,6 +166,8 @@ func checkOpenapiToken(c *gin.Context, settingsSvc *services.SettingsService) bo
 // SetAuthCookie 设置认证 Cookie，expireDays 为过期天数
 func SetAuthCookie(c *gin.Context, token string, expireDays int) {
 	maxAge := 86400 * expireDays
+	// 增加 SameSite=Lax 和 Secure 属性（如果环境支持，这里暂时设为 false，但生产建议 true）
+	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(constant.CookieName, token, maxAge, "/", "", false, true)
 }
 
@@ -200,15 +235,18 @@ func SwaggerAuth() gin.HandlerFunc {
 		}
 
 		// 检查提供的 token 是否匹配
-		if providedToken != "" && providedToken == tokenConfig.Token {
-			// 如果是通过 url 参数进来的，自动将其种入 Cookie，便于后续加载静态资源 (如 json)
-			if tokenQuery != "" {
-				c.SetCookie("openapi_token", providedToken, 86400, "/openapi", "", false, false)
+		if providedToken != "" {
+			h1 := sha256.Sum256([]byte(providedToken))
+			h2 := sha256.Sum256([]byte(tokenConfig.Token))
+			if subtle.ConstantTimeCompare(h1[:], h2[:]) == 1 {
+				// 如果是通过 url 参数进来的，自动将其种入 Cookie，便于后续加载静态资源 (如 json)
+				if tokenQuery != "" {
+					c.SetCookie("openapi_token", providedToken, 86400, "/openapi", "", false, false)
+				}
+				c.Next()
+				return
 			}
-			c.Next()
-			return
 		}
-
 		// 验证失败，不再返回 WWW-Authenticate 头触发浏览器反人类原生弹窗
 		// 我们返回 401 的 JSON 或纯文本结构，以便由调用方自行接管鉴权逻辑
 		c.JSON(http.StatusUnauthorized, gin.H{

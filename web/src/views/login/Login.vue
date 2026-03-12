@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { Loader2 } from 'lucide-vue-next'
 import { api } from '@/api'
 import { toast } from 'vue-sonner'
-import { resetAuthCache } from '@/router'
+import { setAuthCache } from '@/router'
 
-const router = useRouter()
+
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -106,9 +107,12 @@ async function handleLogin() {
   loading.value = true
   try {
     await api.auth.login({ username: username.value, password: password.value })
-    resetAuthCache() // 重置认证缓存
+    setAuthCache(true) // 直接设置登录状态，避免多余请求
     toast.success('登录成功')
-    router.push('/')
+    
+    // 使用 window.location.href 替代 router.push，确保应用状态完全重新初始化，解决偶发的路由卡死/白屏问题
+    const baseUrl = (window as any).__BASE_URL__ || ''
+    window.location.href = baseUrl + '/'
   } catch {
     toast.error('登录失败，请检查用户名和密码')
   } finally {
@@ -177,6 +181,7 @@ onMounted(loadSiteSettings)
             <Button type="submit"
               class="w-full h-12 text-base font-bold rounded-2xl bg-gradient-to-r from-primary/90 to-primary shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
               :disabled="loading">
+              <Loader2 v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
               {{ loading ? '验证中...' : '立即登录' }}
             </Button>
           </form>

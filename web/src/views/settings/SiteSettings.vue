@@ -22,8 +22,6 @@ import {
 
 const { refreshSettings } = useSiteSettings()
 
-const baseUrl = (window as any).__BASE_URL__ || ''
-
 const form = ref<SiteSettings>({
   title: '',
   subtitle: '',
@@ -113,11 +111,7 @@ async function copyOpenapiToken() {
 }
 
 function openSwaggerDocs() {
-  if (!form.value.openapi_enabled) {
-    toast.error('必须先开启 OpenAPI 才能查看接口文档页面')
-    return
-  }
-  window.open(`${baseUrl}/openapi/index.html`, '_blank')
+  window.open('https://engigu.github.io/baihu-panel/guide/api.html', '_blank')
 }
 
 
@@ -143,16 +137,16 @@ onMounted(loadSettings)
           v-html="iconPreview" />
       </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-      <Label class="sm:text-right">分页/Cookie</Label>
-      <div class="sm:col-span-3 flex flex-wrap items-center gap-4">
-        <div class="flex items-center gap-2">
-          <Input v-model="form.page_size" type="number" class="w-20" />
-          <span class="text-sm text-muted-foreground">条/页</span>
+    <div class="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+      <Label class="sm:text-right text-muted-foreground whitespace-nowrap sm:pt-0 pt-1">分页/Cookie</Label>
+      <div class="sm:col-span-3 grid grid-cols-2 gap-0">
+        <div class="flex items-center gap-1.5 pr-4">
+          <Input v-model="form.page_size" type="number" class="w-full h-8 text-xs sm:h-9 sm:text-sm" />
+          <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">条/页</span>
         </div>
-        <div class="flex items-center gap-2">
-          <Input v-model="form.cookie_days" type="number" class="w-20" />
-          <span class="text-sm text-muted-foreground">天过期</span>
+        <div class="flex items-center gap-1.5 border-l pl-4 border-border/50">
+          <Input v-model="form.cookie_days" type="number" class="w-full h-8 text-xs sm:h-9 sm:text-sm" />
+          <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">天过期</span>
         </div>
       </div>
     </div>
@@ -161,53 +155,51 @@ onMounted(loadSettings)
       <h3 class="text-lg font-medium text-foreground mb-4">日志清理策略</h3>
       <p class="text-sm text-muted-foreground mb-4">自动清理超过指定天数或数量的日志记录，保持系统性能。</p>
 
-      <div class="space-y-4 sm:space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-          <Label class="sm:text-right text-muted-foreground whitespace-nowrap">系统通知</Label>
-          <div class="sm:col-span-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <div class="flex items-center gap-1.5">
-              <Input v-model="form.system_notice_days" type="number" class="w-16 h-8 text-xs sm:w-20 sm:h-9 sm:text-sm"
+      <div class="space-y-5 sm:space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+          <Label class="sm:text-right text-muted-foreground whitespace-nowrap sm:pt-0 pt-1">系统通知</Label>
+          <div class="sm:col-span-3 grid grid-cols-2 gap-0">
+            <div class="flex items-center gap-1.5 pr-4">
+              <Input v-model="form.system_notice_days" type="number" class="w-full h-8 text-xs sm:h-9 sm:text-sm"
                 min="0" />
               <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">天清理</span>
             </div>
-            <div class="flex items-center gap-1.5 border-l pl-3 border-border/50">
+            <div class="flex items-center gap-1.5 border-l pl-4 border-border/50">
               <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">保留</span>
-              <Input v-model="form.system_notice_max_count" type="number"
-                class="w-20 h-8 text-xs sm:w-24 sm:h-9 sm:text-sm" min="0" />
-              <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">条</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-          <Label class="sm:text-right text-muted-foreground whitespace-nowrap">推送日志</Label>
-          <div class="sm:col-span-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <div class="flex items-center gap-1.5">
-              <Input v-model="form.push_log_days" type="number" class="w-16 h-8 text-xs sm:w-20 sm:h-9 sm:text-sm"
-                min="0" />
-              <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">天清理</span>
-            </div>
-            <div class="flex items-center gap-1.5 border-l pl-3 border-border/50">
-              <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">保留</span>
-              <Input v-model="form.push_log_max_count" type="number" class="w-20 h-8 text-xs sm:w-24 sm:h-9 sm:text-sm"
+              <Input v-model="form.system_notice_max_count" type="number" class="w-full h-8 text-xs sm:h-9 sm:text-sm"
                 min="0" />
               <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">条</span>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-          <Label class="sm:text-right text-muted-foreground whitespace-nowrap">登录日志</Label>
-          <div class="sm:col-span-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <div class="flex items-center gap-1.5">
-              <Input v-model="form.login_log_days" type="number" class="w-16 h-8 text-xs sm:w-20 sm:h-9 sm:text-sm"
-                min="0" />
+        <div class="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+          <Label class="sm:text-right text-muted-foreground whitespace-nowrap sm:pt-0 pt-1">推送日志</Label>
+          <div class="sm:col-span-3 grid grid-cols-2 gap-0">
+            <div class="flex items-center gap-1.5 pr-4">
+              <Input v-model="form.push_log_days" type="number" class="w-full h-8 text-xs sm:h-9 sm:text-sm" min="0" />
               <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">天清理</span>
             </div>
-            <div class="flex items-center gap-1.5 border-l pl-3 border-border/50">
+            <div class="flex items-center gap-1.5 border-l pl-4 border-border/50">
               <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">保留</span>
-              <Input v-model="form.login_log_max_count" type="number" class="w-20 h-8 text-xs sm:w-24 sm:h-9 sm:text-sm"
+              <Input v-model="form.push_log_max_count" type="number" class="w-full h-8 text-xs sm:h-9 sm:text-sm"
                 min="0" />
+              <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">条</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+          <Label class="sm:text-right text-muted-foreground whitespace-nowrap sm:pt-0 pt-1">登录日志</Label>
+          <div class="sm:col-span-3 grid grid-cols-2 gap-0">
+            <div class="flex items-center gap-1.5 pr-4">
+              <Input v-model="form.login_log_days" type="number" class="w-full h-8 text-xs sm:h-9 sm:text-sm" min="0" />
+              <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">天清理</span>
+            </div>
+            <div class="flex items-center gap-1.5 border-l pl-4 border-border/50">
+              <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">保留</span>
+              <Input v-model="form.login_log_max_count" type="number"
+                class="w-full h-full h-8 text-xs sm:h-9 sm:text-sm" min="0" />
               <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">条</span>
             </div>
           </div>
@@ -245,7 +237,8 @@ onMounted(loadSettings)
         <div class="flex items-center gap-2">
           <h3 class="text-lg font-medium text-foreground whitespace-nowrap">OpenAPI Token</h3>
           <Badge variant="secondary"
-            class="font-normal text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 whitespace-nowrap">推荐方式</Badge>
+            class="font-normal text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 whitespace-nowrap">
+            推荐方式</Badge>
         </div>
         <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
           <a href="#" @click.prevent="openSwaggerDocs"
@@ -261,7 +254,8 @@ onMounted(loadSettings)
       </div>
       <p class="text-sm text-muted-foreground mb-4">开启全局 OpenAPI 直接访问能力，配置后可通过请求头 <code
           class="bg-muted px-1.5 py-0.5 rounded text-xs select-all font-sans">Authorization: Bearer &lt;在此生成的Token&gt;</code>
-        以第三方身份调用系统的所有接口，请妥善保管 Token 并设置合理的有效期。<span class="text-amber-600 dark:text-amber-500 font-medium ml-1">注意：必须先开启本功能才能查看接口文档页面和对接调用。</span></p>
+        以第三方身份调用系统的所有接口，请妥善保管 Token 并设置合理的有效期。<span
+          class="text-amber-600 dark:text-amber-500 font-medium ml-1">注意：必须先开启本功能才能查看接口文档页面和对接调用。</span></p>
 
       <div class="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4 mb-4">
         <Label class="sm:text-right text-muted-foreground">Token 密钥</Label>

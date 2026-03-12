@@ -29,6 +29,22 @@ type loginAttempt struct {
 
 var loginAttempts sync.Map
 
+func init() {
+	// 定期清理过期的登录尝试统计，防止内存溢出
+	go func() {
+		ticker := time.NewTicker(30 * time.Minute)
+		for range ticker.C {
+			loginAttempts.Range(func(key, value any) bool {
+				attempt := value.(*loginAttempt)
+				if time.Since(attempt.LastAttempt) > 10*time.Minute {
+					loginAttempts.Delete(key)
+				}
+				return true
+			})
+		}
+	}()
+}
+
 func NewAuthController(userService *services.UserService, settingsService *services.SettingsService, loginLogService *services.LoginLogService) *AuthController {
 	return &AuthController{
 		userService:     userService,
@@ -107,7 +123,7 @@ func (ac *AuthController) Login(c *gin.Context) {
 	}
 
 	// 生成 token
-	token, err := utils.GenerateToken(user.ID, user.Username, expireDays, constant.Secret)
+	token, err := utils.GenerateToken(user.ID, user.Username, user.TokenVersion, expireDays, constant.Secret)
 	if err != nil {
 		eventbus.DefaultBus.Publish(eventbus.Event{
 			Type: constant.EventUserLogin,
@@ -144,18 +160,23 @@ func (ac *AuthController) Login(c *gin.Context) {
 }
 
 func (ac *AuthController) Logout(c *gin.Context) {
+	if userID, exists := c.Get("userID"); exists {
+		ac.userService.InvalidateUserTokens(userID.(string))
+	}
 	middleware.ClearAuthCookie(c)
 	utils.SuccessMsg(c, "退出成功")
 }
 
 func (ac *AuthController) GetCurrentUser(c *gin.Context) {
-	username, exists := c.Get("username")
-	if !exists {
-		utils.Unauthorized(c, "未登录")
+	userID := c.GetString("userID")
+	user, err := ac.userService.GetUserByID(userID)
+	if err != nil {
+		utils.Unauthorized(c, "会话无效")
 		return
 	}
 	utils.Success(c, gin.H{
-		"username": username,
+		"username": user.Username,
+		"role":     user.Role,
 	})
 }
 
@@ -171,6 +192,8 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	user := ac.userService.CreateUser(req.Username, req.Email, req.Password, "user")
+	// 安全性：强制设定角色为 user，防止注册时篡改角色为 admin
+	// 修复原代码中 email 和 password 参数位置颠倒的问题
+	user := ac.userService.CreateUser(req.Username, req.Password, req.Email, constant.DefaultRole)
 	utils.Success(c, vo.ToUserVO(user))
 }

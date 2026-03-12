@@ -53,7 +53,7 @@ export const api = {
     login: (data: { username: string; password: string }) =>
       request<{ user: string }>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
     logout: () => request('/auth/logout', { method: 'POST' }),
-    me: () => request<{ username: string }>('/auth/me'),
+    me: () => request<{ username: string; role: string }>('/auth/me'),
     register: (data: { username: string; password: string; email: string }) =>
       request('/auth/register', { method: 'POST', body: JSON.stringify(data) })
   },
@@ -142,7 +142,7 @@ export const api = {
     taskStats: (days?: number) => request<TaskStatsItem[]>(`/taskstats${days ? `?days=${days}` : ''}`)
   },
   settings: {
-    changePassword: (data: { old_password: string; new_password: string }) =>
+    changePassword: (data: { old_username?: string; username?: string; old_password: string; new_password?: string }) =>
       request('/settings/password', { method: 'POST', body: JSON.stringify(data) }),
     getSite: () => request<SiteSettings>('/settings/site'),
     getPublicSite: () => request<{ title: string; subtitle: string; icon: string; demo_mode: boolean }>('/settings/public'),

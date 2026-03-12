@@ -5,7 +5,26 @@ import (
 	"compress/zlib"
 	"encoding/base64"
 	"io"
+	"sync"
 )
+
+var zlibWriterPool = sync.Pool{
+	New: func() interface{} {
+		return zlib.NewWriter(io.Discard)
+	},
+}
+
+// GetZlibWriter 从对象池中获取 zlib 写入器
+func GetZlibWriter(w io.Writer) *zlib.Writer {
+	zw := zlibWriterPool.Get().(*zlib.Writer)
+	zw.Reset(w)
+	return zw
+}
+
+// PutZlibWriter 将 zlib 写入器还回对象池
+func PutZlibWriter(zw *zlib.Writer) {
+	zlibWriterPool.Put(zw)
+}
 
 // CompressToBase64 compresses data using zlib and encodes to base64
 func CompressToBase64(data string) (string, error) {
@@ -13,13 +32,16 @@ func CompressToBase64(data string) (string, error) {
 		return "", nil
 	}
 	var buf bytes.Buffer
-	zw := zlib.NewWriter(&buf)
+	zw := GetZlibWriter(&buf)
+	defer PutZlibWriter(zw)
+	
 	if _, err := zw.Write([]byte(data)); err != nil {
 		return "", err
 	}
 	if err := zw.Close(); err != nil {
 		return "", err
 	}
+	
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 

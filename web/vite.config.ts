@@ -1,10 +1,62 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { fileURLToPath, URL } from 'node:url'
+import { writeFileSync, readFileSync, readdirSync, statSync, existsSync, unlinkSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import { gzipSync } from 'node:zlib'
+
+// Simple inline compression plugin to avoid extra dependencies
+const compressionPlugin = () => ({
+  name: 'compression-plugin',
+  apply: 'build',
+  closeBundle: {
+    order: 'post',
+    handler: async () => {
+      const distDir = resolve(process.cwd(), 'dist')
+      if (!existsSync(distDir)) return
+      
+      const compressDir = (dir: string) => {
+        const files = readdirSync(dir)
+        for (const file of files) {
+          const filePath = join(dir, file)
+          const stat = statSync(filePath)
+          if (stat.isDirectory()) {
+            compressDir(filePath)
+          } else if (file.match(/\.(js|css|html|svg|json|vs)$/) && !file.endsWith('.gz')) {
+            try {
+              const content = readFileSync(filePath)
+              if (content.length < 1024) continue // Don't compress very small files
+              const gzipped = gzipSync(content, { level: 9 })
+              writeFileSync(`${filePath}.gz`, gzipped)
+              // Remove original file after successful compression to save space in binary
+              unlinkSync(filePath)
+            } catch (e) {
+              console.error(`Compression failed for ${file}:`, e)
+            }
+          }
+        }
+      }
+      compressDir(distDir)
+    }
+  }
+} as const)
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [
+    vue(),
+    tailwindcss(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'node_modules/monaco-editor/min/vs',
+          dest: 'assets'
+        }
+      ]
+    }),
+    compressionPlugin()
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -27,6 +79,8 @@ export default defineConfig({
   // 浏览器会根据当前页面 URL 解析相对路径
   base: './',
   build: {
+    reportCompressedSize: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         // 防止生成以 _ 开头的文件，导致被 Cloudflare Pages 或 Github Pages 等静态托管平台拦截并降级返回 HTML
@@ -41,5 +95,10 @@ export default defineConfig({
         }
       }
     }
+  },
+  define: {
+    // Define MONACO_BASE_URL for monaco-editor to correctly load its workers and assets
+    // This path should match the destination of viteStaticCopy for monaco-editor's 'vs' folder
+    MONACO_BASE_URL: JSON.stringify('./assets/vs')
   }
 })

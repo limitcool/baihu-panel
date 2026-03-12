@@ -42,17 +42,19 @@ func NewSettingsController(userService *services.UserService, loginLogService *s
 	}
 }
 
-// ChangePassword 修改密码
+// ChangePassword 修改密码及账号信息
 func (sc *SettingsController) ChangePassword(c *gin.Context) {
-	// 演示模式下禁止修改密码
+	// 演示模式下禁止修改
 	if constant.DemoMode {
-		utils.BadRequest(c, "演示模式下不能修改密码")
+		utils.BadRequest(c, "演示模式下不能修改账号或密码")
 		return
 	}
 
 	var req struct {
+		OldUsername string `json:"old_username"`
+		Username    string `json:"username"`
 		OldPassword string `json:"old_password" binding:"required"`
-		NewPassword string `json:"new_password" binding:"required,min=6"`
+		NewPassword string `json:"new_password"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -67,13 +69,46 @@ func (sc *SettingsController) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	if !sc.userService.ValidatePassword(user, req.OldPassword) {
+	// 统一校验原账密
+	if req.OldUsername != "" && req.OldUsername != user.Username {
+		utils.BadRequest(c, "原账号不正确")
+		return
+	}
+
+	if !sc.userService.AuthenticateUser(user.Username, req.OldPassword) {
 		utils.BadRequest(c, "原密码错误")
 		return
 	}
 
-	if err := sc.userService.UpdatePassword(user.ID, req.NewPassword); err != nil {
-		utils.ServerError(c, "修改密码失败")
+	var updated bool
+	var logoutRequired bool
+
+	// 1. 处理用户名修改
+	if req.Username != "" && req.Username != user.Username {
+		if err := sc.userService.UpdateAccount(user.ID, req.Username); err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+		updated = true
+		logoutRequired = true
+	}
+
+	// 2. 处理密码修改
+	if req.NewPassword != "" {
+		if len(req.NewPassword) < 6 {
+			utils.BadRequest(c, "新密码至少6位")
+			return
+		}
+		if err := sc.userService.UpdatePassword(user.ID, req.NewPassword); err != nil {
+			utils.ServerError(c, "修改密码失败")
+			return
+		}
+		updated = true
+		logoutRequired = true
+	}
+
+	if !updated {
+		utils.SuccessMsg(c, "未检测到变更内容")
 		return
 	}
 
@@ -84,7 +119,11 @@ func (sc *SettingsController) ChangePassword(c *gin.Context) {
 		},
 	})
 
-	utils.SuccessMsg(c, "密码修改成功")
+	msg := "保存成功"
+	if logoutRequired {
+		msg += "，请重新登录"
+	}
+	utils.SuccessMsg(c, msg)
 }
 
 // CleanLogs 清理日志 - 已移除，改为任务级别的日志清理配置

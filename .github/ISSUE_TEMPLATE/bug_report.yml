@@ -1,0 +1,81 @@
+name: Bug 反馈
+description: 提交一个可复现的问题报告
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请尽量提供完整信息，便于我们复现问题并验证修复结果。
+        如果可以，请优先附上报错信息，或提供关键步骤截图。
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 请说明当前出现了什么问题，以及你期望的行为是什么。
+      placeholder: 请简要清晰地描述你遇到的 bug。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 请按顺序填写可以稳定复现问题的步骤，最好附上关键步骤截图。
+      placeholder: |
+        1. 进入 ...
+        2. 点击 ...
+        3. 看到 ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      placeholder: 请描述你预期看到的结果。
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      placeholder: 请描述实际结果，如有报错提示、异常信息或界面截图，请一并提供。
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本信息
+      description: 请填写程序版本、commit hash 或镜像标签。
+      placeholder: 例如：v1.2.3
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: 部署方式
+      options:
+        - Docker
+        - Docker Compose
+        - 源码构建
+        - 二进制发布版
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 运行环境
+      description: 请填写操作系统、浏览器、CPU 架构或其他相关环境信息。
+      placeholder: 例如：Ubuntu 24.04、Chrome 134、amd64
+  - type: textarea
+    id: logs
+    attributes:
+      label: 错误日志或截图
+      description: 请粘贴错误日志、堆栈信息，或上传能帮助定位问题的截图。
+      render: shell
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 其他有助于理解或修复该问题的内容。

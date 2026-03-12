@@ -7,6 +7,7 @@ import (
 	"github.com/engigu/baihu-panel/internal/middleware"
 	"github.com/engigu/baihu-panel/internal/services"
 
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 )
 
@@ -47,15 +48,18 @@ func Setup(c *Controllers) *gin.Engine {
 		root = router.Group("")
 	}
 
+	// 按需绑定 Pprof 调试路由 (注册在 root 下以支持 URLPrefix)
+	if cfg.Server.PprofEnabled {
+		// pprof.RouteRegister 会在传入的路由组下注册 /debug/pprof 等路由
+		pprof.RouteRegister(root)
+	}
+
 	// =========================================================================
 	// 路由分类组装 (对应 Nginx 的 location 块分发)
 	// =========================================================================
 
 	// 1. [ location /assets ] 静态资源路由
 	initStaticRoutes(root)
-
-	// 2. [ location /openapi ] OpenAPI 文档路由
-	initOpenAPIRoutes(root, urlPrefix)
 
 	// 3. [ location /api ] 内部 API 路由组
 	apiV1 := root.Group("/api/v1")
@@ -94,7 +98,7 @@ func Setup(c *Controllers) *gin.Engine {
 			hasAnyExt = true
 		}
 
-		if strings.HasPrefix(relPath, "/api/") || strings.HasPrefix(relPath, "/assets/") || hasAnyExt {
+		if strings.HasPrefix(relPath, "/api/") || strings.HasPrefix(relPath, "/assets/") || strings.HasPrefix(relPath, "/debug/") || hasAnyExt {
 			ctx.String(404, "404 Not Found")
 			return
 		}

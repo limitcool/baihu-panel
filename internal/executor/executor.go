@@ -173,7 +173,7 @@ func ExecuteWithHooks(ctx context.Context, req Request, stdout, stderr io.Writer
 		)
 		f, ptyErr := pty.Start(cmd)
 		if ptyErr == nil {
-		logger.Infof("[Executor] 任务 #%s 启动于 PTY 模式", logID)
+			logger.Infof("[Executor] 任务 #%s 启动于 PTY 模式", logID)
 			ptyFile = f
 			started = true
 			copyDone = make(chan struct{})
@@ -327,6 +327,7 @@ func ParseEnvVars(envStr string) []string {
 		// 解码特殊字符
 		pair = strings.ReplaceAll(pair, "{{COMMA}}", ",")
 		pair = strings.ReplaceAll(pair, "{{EQUAL}}", "=")
+		pair = strings.ReplaceAll(pair, "{{NL}}", "\n")
 		result = append(result, pair)
 	}
 
@@ -334,7 +335,7 @@ func ParseEnvVars(envStr string) []string {
 }
 
 // FormatEnvVars 将环境变量列表格式化为逗号分隔的字符串 "KEY1=VALUE1,KEY2=VALUE2"
-// 会对 , 和 = 进行转义
+// 会对 , 和 = 以及换行符进行转义
 func FormatEnvVars(envs []string) string {
 	if len(envs) == 0 {
 		return ""
@@ -353,6 +354,7 @@ func FormatEnvVars(envs []string) string {
 		// 转义特殊字符
 		encodedValue := strings.ReplaceAll(value, ",", "{{COMMA}}")
 		encodedValue = strings.ReplaceAll(encodedValue, "=", "{{EQUAL}}")
+		encodedValue = strings.ReplaceAll(encodedValue, "\n", "{{NL}}")
 		pairs = append(pairs, fmt.Sprintf("%s=%s", name, encodedValue))
 	}
 

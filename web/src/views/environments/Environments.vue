@@ -215,7 +215,7 @@ onMounted(loadEnvVars)
           </div>
           <div class="space-y-2">
             <Label>变量值</Label>
-            <Input v-model="editingEnv.value" class="font-mono" placeholder="value" />
+            <Textarea v-model="editingEnv.value" class="font-mono" placeholder="value" rows="5" />
           </div>
           <div class="space-y-2">
             <Label>备注</Label>

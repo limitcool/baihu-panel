@@ -387,7 +387,8 @@ func (fc *FileController) UploadArchive(c *gin.Context) {
 	os.MkdirAll(extractDir, 0755)
 
 	// 保存临时文件
-	tempFile := filepath.Join(os.TempDir(), file.Filename)
+	// 安全修复：使用 filepath.Base 提取纯文件名，防止路径穿越攻击
+	tempFile := filepath.Join(os.TempDir(), filepath.Base(file.Filename))
 	if err := c.SaveUploadedFile(file, tempFile); err != nil {
 		utils.ServerError(c, "保存文件失败")
 		return
@@ -441,7 +442,8 @@ func (fc *FileController) UploadFiles(c *gin.Context) {
 
 	for i, file := range files {
 		// 获取相对路径（如果有）
-		relPath := file.Filename
+		// 安全修复：清理文件名
+		relPath := filepath.Base(file.Filename)
 		if i < len(paths) && paths[i] != "" {
 			relPath = paths[i]
 		}

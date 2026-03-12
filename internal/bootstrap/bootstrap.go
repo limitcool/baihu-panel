@@ -11,6 +11,7 @@ import (
 	"github.com/engigu/baihu-panel/internal/logger"
 	"github.com/engigu/baihu-panel/internal/router"
 	"github.com/engigu/baihu-panel/internal/services"
+	"github.com/engigu/baihu-panel/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,12 +24,15 @@ type App struct {
 func New() *App {
 	app := InitBasic()
 	app.initRouter()
+	// 初始化完成后回收一次内存
+	utils.FreeMemory()
 	return app
 }
 
 // InitBasic 初始化基础环境（配置和数据库），不启动后台服务和路由
 func InitBasic() *App {
 	app := &App{}
+	utils.InitRuntime()
 	app.initConfig()
 	app.initDatabase()
 	return app

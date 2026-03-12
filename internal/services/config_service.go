@@ -12,8 +12,9 @@ import (
 
 type ServerConfig struct {
 	Port      int    `ini:"port"`
-	Host      string `ini:"host"`
-	URLPrefix string `ini:"url_prefix"`
+	Host         string `ini:"host"`
+	URLPrefix    string `ini:"url_prefix"`
+	PprofEnabled bool   `ini:"pprof_enabled"`
 }
 
 type DatabaseConfig struct {
@@ -46,6 +47,15 @@ func getEnvStr(key string, target *string) {
 	}
 }
 
+// getEnvBool 获取环境变量布尔值
+func getEnvBool(key string, target *bool) {
+	if v := os.Getenv(key); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			*target = b
+		}
+	}
+}
+
 // getEnvInt 获取环境变量整数
 func getEnvInt(key string, target *int) {
 	if v := os.Getenv(key); v != "" {
@@ -59,8 +69,9 @@ func LoadConfig(path string) (*AppConfig, error) {
 	// 初始化默认配置
 	Config = &AppConfig{
 		Server: ServerConfig{
-			Port: 8052,
-			Host: "0.0.0.0",
+			Port:         8052,
+			Host:         "0.0.0.0",
+			PprofEnabled: false,
 		},
 		Database: DatabaseConfig{
 			Type:        "sqlite",
@@ -128,6 +139,7 @@ func applyEnvOverrides() {
 	getEnvInt("BH_SERVER_PORT", &Config.Server.Port)
 	getEnvStr("BH_SERVER_HOST", &Config.Server.Host)
 	getEnvStr("BH_SERVER_URL_PREFIX", &Config.Server.URLPrefix)
+	getEnvBool("BH_SERVER_PPROF", &Config.Server.PprofEnabled)
 
 	// Database
 	getEnvStr("BH_DB_TYPE", &Config.Database.Type)

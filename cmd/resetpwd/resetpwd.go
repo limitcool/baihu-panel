@@ -12,7 +12,24 @@ import (
 )
 
 func Run(args []string) {
-	fmt.Print("此操作将重置 admin 用户的密码，是否继续? (y/N): ")
+	// 基础环境初始化
+	bootstrap.InitBasic()
+	settingsService := services.NewSettingsService()
+	if err := settingsService.InitSettings(); err != nil {
+		fmt.Printf("初始化系统设置失败: %v\n", err)
+		return
+	}
+	userService := services.NewUserService()
+
+	var username string
+
+	if len(args) >= 1 {
+		username = args[0]
+	} else {
+		username = "admin"
+	}
+
+	fmt.Printf("此操作将重置用户 [%s] 的密码，是否继续? (y/N): ", username)
 	reader := bufio.NewReader(os.Stdin)
 	answer, _ := reader.ReadString('\n')
 	answer = strings.TrimSpace(strings.ToLower(answer))
@@ -22,22 +39,7 @@ func Run(args []string) {
 		return
 	}
 
-	// 必须初始化环境与数据库才能修改密码
-	bootstrap.InitBasic()
-	settingsService := services.NewSettingsService()
-	if err := settingsService.InitSettings(); err != nil {
-		fmt.Printf("初始化系统设置失败: %v\n", err)
-		return
-	}
-
-	userService := services.NewUserService()
-	adminUser := userService.GetUserByUsername("admin")
-	if adminUser == nil {
-		fmt.Println("找不到 admin 用户。")
-		return
-	}
-
-	fmt.Print("请输入 admin 用户的新密码 (留空则自动随机生成): ")
+	fmt.Printf("请输入用户 [%s] 的新密码 (留空则自动随机生成): ", username)
 	inputPwd, _ := reader.ReadString('\n')
 	newPassword := strings.TrimSpace(inputPwd)
 	if newPassword == "" {
@@ -45,14 +47,20 @@ func Run(args []string) {
 		fmt.Println("未输入密码，系统已自动生成。")
 	}
 
-	err := userService.UpdatePassword(adminUser.ID, newPassword)
+	user := userService.GetUserByUsername(username)
+	if user == nil {
+		fmt.Printf("找不到用户 [%s]\n", username)
+		return
+	}
+
+	err := userService.UpdatePassword(user.ID, newPassword)
 	if err != nil {
 		fmt.Printf("重置密码失败: %v\n", err)
 		return
 	}
 
 	fmt.Println("--------------------------------------------------")
-	fmt.Println("admin 用户密码已重置成功:")
+	fmt.Printf("用户 [%s] 密码已重置成功:\n", username)
 	fmt.Printf("新密码: %s\n", newPassword)
 	fmt.Println("请妥善保管您的新密码，并登录后及时修改。")
 	fmt.Println("--------------------------------------------------")

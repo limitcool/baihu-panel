@@ -17,10 +17,16 @@ async function getAuthStatus(force = false): Promise<boolean> {
   return isAuth
 }
 
-// 重置认证状态（登录/登出时调用）
+// 重置认证状态（登出时调用）
 export function resetAuthCache() {
   authChecked = false
   isAuth = false
+}
+
+// 直接设置认证状态（登录成功时调用，避免多余请求）
+export function setAuthCache(status: boolean) {
+  authChecked = true
+  isAuth = status
 }
 
 const router = createRouter({

@@ -302,8 +302,15 @@ func (s *NotificationService) handleEvent(bindingType string) eventbus.Handler {
 		var title, text string
 		switch e.Type {
 		case constant.EventUserLogin:
-			title = "用户登录通知"
-			text = fmt.Sprintf("用户 %v 在 IP %v 登录成功", payload["username"], payload["ip"])
+			status, _ := payload["status"].(string)
+			if status == "success" {
+				title = "用户登录成功"
+				text = fmt.Sprintf("用户 %v 在 IP %v 登录成功", payload["username"], payload["ip"])
+			} else {
+				title = "用户登录失败"
+				reason, _ := payload["message"].(string)
+				text = fmt.Sprintf("用户 %v 在 IP %v 登录失败\n原因: %v", payload["username"], payload["ip"], reason)
+			}
 		case constant.EventBruteForceLogin:
 			title = "系统安全警告"
 			text = fmt.Sprintf("检测到 IP %v 正在尝试暴力破解用户 %v", payload["ip"], payload["username"])

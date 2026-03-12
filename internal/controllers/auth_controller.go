@@ -190,6 +190,8 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	user := ac.userService.CreateUser(req.Username, req.Email, req.Password, "user")
+	// 安全性：强制设定角色为 user，防止注册时篡改角色为 admin
+	// 修复原代码中 email 和 password 参数位置颠倒的问题
+	user := ac.userService.CreateUser(req.Username, req.Password, req.Email, constant.DefaultRole)
 	utils.Success(c, vo.ToUserVO(user))
 }

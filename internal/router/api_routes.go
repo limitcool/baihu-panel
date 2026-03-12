@@ -29,27 +29,32 @@ func initAuthorizedAPIRoutes(api *gin.RouterGroup, c *Controllers) {
 	authorized := api.Group("")
 	authorized.Use(middleware.AuthRequired())
 	{
-		// 获取当前用户
+		// 获取当前用户 (普通用户即可访问)
 		authorized.GET("/auth/me", c.Auth.GetCurrentUser)
 
-		// 仪表盘统计
-		authorized.GET("/stats", c.Dashboard.GetStats)
-		authorized.GET("/sentence", c.Dashboard.GetSentence)
-		authorized.GET("/sendstats", c.Dashboard.GetSendStats)
-		authorized.GET("/taskstats", c.Dashboard.GetTaskStats)
+		// 以下管理接口需要管理员权限
+		adminOnly := authorized.Group("")
+		adminOnly.Use(middleware.AdminRequired())
+		{
+			// 仪表盘统计
+			adminOnly.GET("/stats", c.Dashboard.GetStats)
+			adminOnly.GET("/sentence", c.Dashboard.GetSentence)
+			adminOnly.GET("/sendstats", c.Dashboard.GetSendStats)
+			adminOnly.GET("/taskstats", c.Dashboard.GetTaskStats)
 
-		registerTaskRoutes(authorized, c)
-		registerEnvRoutes(authorized, c)
-		registerScriptRoutes(authorized, c)
-		registerFileRoutes(authorized, c)
-		registerLogRoutes(authorized, c)
-		registerTerminalRoutes(authorized, c)
-		registerSettingsRoutes(authorized, c)
-		registerDependencyRoutes(authorized, c)
-		registerAgentRoutes(authorized, c)
-		registerMiseRoutes(authorized, c)
-		registerNotificationRoutes(authorized, c)
-		registerAppLogRoutes(authorized, c)
+			registerTaskRoutes(adminOnly, c)
+			registerEnvRoutes(adminOnly, c)
+			registerScriptRoutes(adminOnly, c)
+			registerFileRoutes(adminOnly, c)
+			registerLogRoutes(adminOnly, c)
+			registerTerminalRoutes(adminOnly, c)
+			registerSettingsRoutes(adminOnly, c)
+			registerDependencyRoutes(adminOnly, c)
+			registerAgentRoutes(adminOnly, c)
+			registerMiseRoutes(adminOnly, c)
+			registerNotificationRoutes(adminOnly, c)
+			registerAppLogRoutes(adminOnly, c)
+		}
 	}
 
 	// 通知发送 API（使用通知 Token 认证，供脚本调用）

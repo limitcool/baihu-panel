@@ -54,6 +54,7 @@ func initAuthorizedAPIRoutes(api *gin.RouterGroup, c *Controllers) {
 			registerMiseRoutes(adminOnly, c)
 			registerNotificationRoutes(adminOnly, c)
 			registerAppLogRoutes(adminOnly, c)
+			registerManifestRoutes(adminOnly, c)
 		}
 	}
 
@@ -245,5 +246,12 @@ func initAgentAPIRoutes(root *gin.RouterGroup, c *Controllers) {
 		agentAPI.POST("/report", c.Agent.ReportResult)
 		agentAPI.GET("/download", c.Agent.Download) // 也在这里注册，兼容 Agent 调用
 		agentAPI.GET("/ws", c.Agent.WSConnect)      // WebSocket 连接
+	}
+}
+
+func registerManifestRoutes(g *gin.RouterGroup, c *Controllers) {
+	manifest := g.Group("/manifest")
+	{
+		manifest.POST("/export", c.Manifest.Export)
 	}
 }

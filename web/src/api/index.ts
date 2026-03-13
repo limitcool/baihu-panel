@@ -301,6 +301,20 @@ export const api = {
     },
     markAsRead: (data: { id?: string; category?: string }) => request('/app-logs/read', { method: 'POST', body: JSON.stringify(data) }),
     clear: (category: string) => request('/app-logs/clear', { method: 'POST', body: JSON.stringify({ category }) })
+  },
+  manifest: {
+    export: (data: { paths: string[]; tools: Record<string, string>; envs: any[]; tasks: any[] }) =>
+      fetch(`${API_BASE_URL}/manifest/export`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      }).then(res => {
+        if (res.status !== 200) throw new Error('导出失败')
+        return res.blob()
+      })
   }
 }
 

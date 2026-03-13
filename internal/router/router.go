@@ -28,6 +28,7 @@ type Controllers struct {
 	Mise         *controllers.MiseController
 	Notification *controllers.NotificationController
 	AppLog       *controllers.AppLogController
+	Manifest     *controllers.ManifestController
 }
 
 func Setup(c *Controllers) *gin.Engine {

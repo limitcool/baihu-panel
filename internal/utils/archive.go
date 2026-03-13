@@ -125,3 +125,76 @@ func extractTarReader(tr *tar.Reader, dest string) error {
 	}
 	return nil
 }
+
+// CreateZip creates a zip file from source files/directories.
+// srcBase is the base directory to resolve relative paths.
+// items is a list of relative paths to items (files or dirs) to include.
+// files is a map of filename to content for virtual files (like mise.yml).
+func CreateZip(dest string, srcBase string, items []string, virtualFiles map[string][]byte) error {
+	zipFile, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer zipFile.Close()
+
+	archive := zip.NewWriter(zipFile)
+	defer archive.Close()
+
+	// Add virtual files
+	for name, content := range virtualFiles {
+		f, err := archive.Create(name)
+		if err != nil {
+			return err
+		}
+		if _, err := f.Write(content); err != nil {
+			return err
+		}
+	}
+
+	// Add items from filesystem
+	for _, item := range items {
+		fullPath := filepath.Join(srcBase, item)
+		err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			// Get relative path for zip header
+			relPath, err := filepath.Rel(srcBase, path)
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				_, err = archive.Create(relPath + "/")
+				return err
+			}
+
+			header, err := zip.FileInfoHeader(info)
+			if err != nil {
+				return err
+			}
+			header.Name = relPath
+			header.Method = zip.Deflate
+
+			writer, err := archive.CreateHeader(header)
+			if err != nil {
+				return err
+			}
+
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			_, err = io.Copy(writer, file)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

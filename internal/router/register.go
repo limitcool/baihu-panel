@@ -61,6 +61,7 @@ func RegisterControllers() *Controllers {
 		Mise:         controllers.NewMiseController(services.NewMiseService()),
 		Notification: controllers.NewNotificationController(),
 		AppLog:       controllers.NewAppLogController(),
+		Manifest:     controllers.NewManifestController(constant.ScriptsWorkDir),
 	}
 }
 

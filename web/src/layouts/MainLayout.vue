@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { resetAuthCache } from '@/router'
-import { LayoutDashboard, ListTodo, FileCode, Settings, LogOut, ScrollText, Terminal, Variable, KeyRound, Menu, X, Server, Globe, Bell } from 'lucide-vue-next'
+import { LayoutDashboard, ListTodo, FileCode, Settings, LogOut, ScrollText, Terminal, Variable, KeyRound, Menu, X, Server, Globe, Bell, FileUp } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import SystemNotice from '@/components/SystemNotice.vue'
@@ -62,6 +62,7 @@ const navItems = [
   { to: '/languages', icon: Globe, label: '语言依赖', exact: true },
   { to: '/terminal', icon: Terminal, label: '终端命令', exact: true },
   { to: '/notify', icon: Bell, label: '消息推送', exact: true },
+  { to: '/manifest', icon: FileUp, label: '导出导入', exact: true },
   { to: '/logs', icon: KeyRound, label: '消息日志', exact: true },
   { to: '/settings', icon: Settings, label: '系统设置', exact: true },
 ]

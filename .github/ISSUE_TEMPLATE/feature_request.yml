@@ -1,0 +1,47 @@
+name: 需求与建议
+description: 提交新的功能需求、改进建议或特性请求
+title: "[Feature/Suggestion] "
+labels:
+  - feature
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你为项目提供宝贵意见！请详细描述你的想法，以便我们评估和实现。
+  - type: dropdown
+    id: type
+    attributes:
+      label: 类型
+      options:
+        - 功能需求 (New Feature)
+        - 改进建议 (Enhancement/Suggestion)
+        - 其他优化
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: 需求场景/背景
+      description: 你的需求是为了解决什么样的问题？或者是在什么场景下产生的优化想法？
+      placeholder: 请简要说明背景，帮助我们理解痛点。
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 详细描述
+      description: 请具体说明你心目中这个功能应该如何工作，或者改进的具体细节。
+      placeholder: 请具体描述功能的运作逻辑或具体的改进细节。
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: 预期收益
+      description: 如果实现了该需求或建议，会带来哪些提升（如效率、视觉、体验等）？
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 其他有助于理解该需求的内容，比如参考链接、概念图、截图等。

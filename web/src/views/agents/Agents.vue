@@ -141,10 +141,15 @@ function copyToken(token: string) {
 
 async function createToken() {
   try {
+    let expiresAt = tokenForm.value.expires_at
+    if (expiresAt) {
+      // 适配后端格式: 2006-01-02 15:04:05
+      expiresAt = expiresAt.replace('T', ' ') + ':00'
+    }
     await api.agents.createToken({
       remark: tokenForm.value.remark,
       max_uses: tokenForm.value.max_uses,
-      expires_at: tokenForm.value.expires_at || undefined
+      expires_at: expiresAt || undefined
     })
     showTokenDialog.value = false
     tokenForm.value = { remark: '', max_uses: 0, expires_at: '' }
@@ -167,7 +172,9 @@ async function deleteToken(id: string) {
 
 function isTokenExpired(token: AgentToken) {
   if (!token.expires_at) return false
-  return new Date(token.expires_at) < new Date()
+  // 将 "YYYY-MM-DD HH:mm:ss" 转换为 ISO 格式 "YYYY-MM-DDTHH:mm:ss" 以提高浏览器兼容性
+  const dateStr = token.expires_at.replace(' ', 'T')
+  return new Date(dateStr) < new Date()
 }
 
 function isTokenExhausted(token: AgentToken) {

@@ -1,22 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { Terminal } from '@xterm/xterm'
-import { FitAddon } from '@xterm/addon-fit'
-import '@xterm/xterm/css/xterm.css'
-
-const lightTheme = {
-  background: '#f4f4f5', // zinc-100
-  foreground: '#18181b', // zinc-900
-  cursor: '#18181b',
-  selectionBackground: 'rgba(0, 0, 0, 0.15)',
-}
-
-const darkTheme = {
-  background: '#09090b', // zinc-950
-  foreground: '#e4e4e7', // zinc-200
-  cursor: '#e4e4e7',
-  selectionBackground: 'rgba(255, 255, 255, 0.2)',
-}
+import { ref, onMounted, nextTick, watch } from 'vue'
+import Ansi from 'ansi-to-vue3'
 
 const props = withDefaults(
   defineProps<{
@@ -32,109 +16,76 @@ const props = withDefaults(
   }
 )
 
-const terminalRef = ref<HTMLDivElement | null>(null)
-let terminal: Terminal | null = null
-let fitAddon: FitAddon | null = null
-const lightBackgroundClass = 'terminal-theme-light'
-const darkBackgroundClass = 'terminal-theme-dark'
+const scrollContainerRef = ref<HTMLDivElement | null>(null)
+const lightBackgroundClass = 'bg-zinc-100 text-zinc-900'
+const darkBackgroundClass = 'bg-zinc-950 text-zinc-300' // 稍微调亮一点暗色模式文字
 
-function getTheme() {
-  return props.theme === 'dark' ? darkTheme : lightTheme
+// 自动滚动到底部逻辑
+const scrollToBottom = () => {
+  if (props.autoScroll && scrollContainerRef.value) {
+    scrollContainerRef.value.scrollTop = scrollContainerRef.value.scrollHeight
+  }
 }
 
-function initTerminal() {
-  if (!terminalRef.value) return
-  
-  terminal = new Terminal({
-    fontSize: props.fontSize,
-    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-    theme: getTheme(),
-    allowProposedApi: true,
-    convertEol: true,
-    disableStdin: true,
-    cursorBlink: false,
-    rows: 10,
-  })
-
-  fitAddon = new FitAddon()
-  terminal.loadAddon(fitAddon)
-  terminal.open(terminalRef.value)
-  
-  if (props.content) {
-    terminal.write(props.content)
-  }
-
-  setTimeout(() => {
-    fitAddon?.fit()
-  }, 50)
-}
-
-watch(() => props.content, (newContent, oldContent) => {
-  if (!terminal) return
-  
-  if (newContent.length < oldContent.length) {
-    terminal.clear()
-    terminal.write(newContent)
-  } else {
-    const appended = newContent.slice(oldContent.length)
-    terminal.write(appended)
-  }
-
+watch(() => props.content, () => {
   if (props.autoScroll) {
-    terminal.scrollToBottom()
+    nextTick(scrollToBottom)
   }
 })
-
-watch(() => props.theme, () => {
-  if (terminal) {
-    terminal.options.theme = getTheme()
-  }
-})
-
-function handleResize() {
-  fitAddon?.fit()
-}
 
 onMounted(() => {
-  window.addEventListener('resize', handleResize)
-  setTimeout(initTerminal, 100)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-  if (terminal) {
-    terminal.dispose()
+  if (props.autoScroll) {
+    setTimeout(scrollToBottom, 50)
   }
 })
 
 defineExpose({
-  fit: () => fitAddon?.fit(),
-  clear: () => terminal?.clear()
+  fit: () => { }, 
+  clear: () => { },
+  scrollToBottom
 })
 </script>
 
 <template>
   <div
-    ref="terminalRef"
-    class="w-full h-full min-h-0"
+    ref="scrollContainerRef"
+    class="w-full h-full overflow-y-auto overflow-x-auto log-container native-scroll"
     :class="theme === 'dark' ? darkBackgroundClass : lightBackgroundClass"
-  />
+    :style="{ fontSize: fontSize + 'px' }"
+  ><div class="inline-block min-w-full p-3 font-mono leading-normal whitespace-pre text-left"><Ansi>{{ content }}</Ansi></div></div>
 </template>
 
 <style scoped>
-.terminal-theme-light {
-  background-color: #f4f4f5;
+.native-scroll {
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
-.terminal-theme-dark {
-  background-color: #09090b;
+/* 强制覆盖 ansi-to-vue3 可能生成的 code 样式 */
+:deep(code) {
+  background: transparent !important;
+  font-family: inherit;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
-:deep(.xterm) {
-  padding: 8px;
+/* 滚动条美化 */
+.native-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-:deep(.xterm-viewport),
-:deep(.xterm-screen) {
-  background-color: inherit !important;
+
+.native-scroll::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 10px;
+}
+
+.native-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.4);
+}
+
+.native-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 </style>

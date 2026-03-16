@@ -20,7 +20,7 @@
 | `BH_DB_PASSWORD` | database.password | 数据库密码 | - |
 | `BH_DB_NAME` | database.dbname | 数据库库名 | baihu |
 | `BH_DB_PATH` | database.path | SQLite 物理文件存储路径 | ./data/baihu.db |
-| `BH_DB_DSN` | database.dsn | 数据库 DSN (仅 mysql, 优先级高。**需同时设置 type=mysql**) | - |
+| `BH_DB_DSN` | database.dsn | 数据库 DSN (仅 mysql/postgres, 优先级高。**需对应设置 type**) | - |
 | `BH_DB_TABLE_PREFIX` | database.table_prefix | 数据库表前缀 | baihu_ |
 
 ---
@@ -46,9 +46,10 @@ url_prefix = /baihu
 [database]
 type = sqlite
 path = /app/data/baihu.db
-# mysql 连接示例 (Unix Socket): 
-# 注意：使用 dsn 时，type 必须设为 mysql
+# 数据库连接示例 (Unix Socket / DSN): 
+# 注意：使用 dsn 时，type 必须设为 mysql 或 postgres
 # dsn = user:password@unix(/var/run/mysqld/mysqld.sock)/dbname?charset=utf8mb4&parseTime=True&loc=Local
+# dsn = postgres://user:password@localhost:5432/dbname?sslmode=disable
 table_prefix = baihu_
 ```
 

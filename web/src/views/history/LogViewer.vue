@@ -56,9 +56,9 @@ onUnmounted(() => {
       <div
         class="bg-background rounded-lg shadow-lg flex flex-col w-full sm:w-[90vw] md:w-[80vw] max-w-5xl h-[90vh] sm:h-[85vh]">
         <div
-          class="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b shrink-0 gap-2">
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="text-sm font-medium truncate">{{ title }}</span>
+          class="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b shrink-0 gap-3">
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <span class="text-sm font-medium truncate" :title="title">{{ title }}</span>
             <div v-if="status"
               class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors shrink-0"
               :class="status === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
@@ -72,8 +72,8 @@ onUnmounted(() => {
               {{ status === 'success' ? '成功' : status === 'failed' ? '失败' : '执行中' }}
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" @click="close">
+          <div class="flex items-center gap-2 shrink-0">
+            <Button variant="ghost" size="icon" class="h-8 w-8 sm:h-7 sm:w-7" @click="close">
               <X class="h-4 w-4" />
             </Button>
           </div>

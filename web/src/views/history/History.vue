@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { TASK_STATUS, TASK_TYPE } from '@/constants'
 import { Button } from '@/components/ui/button'
@@ -175,11 +175,6 @@ async function selectLog(log: TaskLog) {
       wsContent.value = event.data
     } else {
       wsContent.value += event.data
-      // 自动滚动到底部
-      nextTick(() => {
-        const pre = document.querySelector('.log-pre')
-        if (pre) pre.scrollTop = pre.scrollHeight
-      })
     }
   }
 

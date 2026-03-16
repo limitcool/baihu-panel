@@ -48,8 +48,11 @@ func Init(cfg *Config) error {
 		}
 		dialector = mysql.Open(dsn)
 	case "postgres":
-		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
-			cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName)
+		dsn := cfg.DSN
+		if dsn == "" {
+			dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
+				cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName)
+		}
 		dialector = postgres.Open(dsn)
 	default:
 		return fmt.Errorf("unsupported database type: %s", cfg.Type)

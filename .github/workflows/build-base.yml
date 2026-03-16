@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        base_type: [debian, debian13, slim]
+        base_type: [debian, debian13, minimal]
         platform:
           - linux/amd64
           - linux/arm64
@@ -126,7 +126,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        base_type: [debian, debian13, slim]
+        base_type: [debian, debian13, minimal]
         include:
           - base_type: debian
             tag: base

@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Copy, Terminal, Key, FileJson, RefreshCw, Check, Hash, Info, AlertTriangle } from 'lucide-vue-next'
+import { Copy, Terminal, Key, FileJson, RefreshCw, Check, Hash, Info, AlertTriangle, Code2 } from 'lucide-vue-next'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,10 +68,174 @@ notify-token: <你的API Token>
   "text": "内容"
 }`
 
-const shellExample = computed(() => `curl -s -X POST "http://${host.value}/api/v1/notify/send" \\
-  -H "Content-Type: application/json" \\
-  -H "notify-token: ${props.apiToken || 'YOUR_TOKEN'}" \\
-  -d '{"channel_id":"YOUR_CHANNEL_ID","title":"标题","text":"通知内容"}'`)
+const shellExample = computed(() => `send_notification() {
+  curl -s -X POST "http://${host.value}/api/v1/notify/send" \\
+    -H "Content-Type: application/json" \\
+    -H "notify-token: \${1:-${props.apiToken || 'YOUR_TOKEN'}}" \\
+    -d "{\\"channel_id\\":\\"\$2\\",\\"title\\":\\"\$3\\",\\"text\\":\\"\$4\\"}"
+}
+
+# 使用示例: send_notification <Token> <渠道ID> <标题> <内容>
+send_notification "${props.apiToken || 'YOUR_TOKEN'}" "ID" "任务完成" "脚本执行完毕"`)
+
+const pythonExample = computed(() => `import requests
+
+def send_notification(token, channel_id, text, title="通知"):
+    url = "http://${host.value}/api/v1/notify/send"
+    headers = {
+        "Content-Type": "application/json",
+        "notify-token": token
+    }
+    payload = {
+        "channel_id": channel_id,
+        "title": title,
+        "text": text
+    }
+    return requests.post(url, json=payload, headers=headers).json()
+
+# 使用示例
+send_notification("${props.apiToken || 'YOUR_TOKEN'}", "ID", "脚本执行完毕", "任务完成")`)
+
+const javascriptExample = computed(() => `async function sendNotification(token, channelId, text, title = "通知") {
+  const url = "http://${host.value}/api/v1/notify/send";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "notify-token": token
+    },
+    body: JSON.stringify({
+      channel_id: channelId,
+      title: title,
+      text: text
+    })
+  });
+  return res.json();
+}
+
+// 使用示例
+sendNotification("${props.apiToken || 'YOUR_TOKEN'}", "ID", "脚本执行完毕", "任务完成");`)
+
+const goExample = computed(() => `package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
+func sendNotification(token, channelID, title, text string) error {
+	url := "http://${host.value}/api/v1/notify/send"
+	payload := map[string]string{
+		"channel_id": channelID,
+		"title":      title,
+		"text":       text,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("notify-token", token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+func main() {
+	// 使用示例
+	sendNotification("${props.apiToken || 'YOUR_TOKEN'}", "ID", "任务完成", "脚本执行完毕")
+}`)
+
+const examples = [
+  { id: 'shell', name: 'Shell', icon: Terminal, code: shellExample },
+  { id: 'python', name: 'Python', icon: Code2, code: pythonExample },
+  { id: 'javascript', name: 'JavaScript', icon: Code2, code: javascriptExample },
+  { id: 'go', name: 'Go', icon: Code2, code: goExample },
+]
+
+const activeLang = ref('shell')
+
+const highlightCode = (code: string, lang: string) => {
+  if (!code) return ''
+
+  const colors = {
+    keyword: 'text-violet-500 dark:text-violet-400 font-medium',
+    string: 'text-emerald-600 dark:text-emerald-400',
+    comment: 'text-zinc-400 dark:text-zinc-500 italic',
+    type: 'text-amber-600 dark:text-amber-500',
+    function: 'text-blue-500 dark:text-blue-400',
+    number: 'text-orange-500',
+    operator: 'text-zinc-400 dark:text-zinc-600'
+  }
+
+  // 基础转义
+  let html = code
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  // 1. 处理字符串 (优先处理，防止内部匹配)
+  html = html.replace(/("(?:\\.|[^"])*")|('(?:\\.|[^'])*')/g, `<span class="${colors.string}">$1</span>`)
+
+  // 2. 处理注释 (注意排除 http:// 或 https:// 中的双斜杠)
+  html = html.replace(/(^|[^\:])(\/\/.+)$|(#.+)$/gm, `$1<span class="${colors.comment}">$2$3</span>`)
+
+  // 3. 语言配置
+  const langConfig: Record<string, { keywords: string[], types: string[], functions: string[] }> = {
+    shell: {
+      keywords: ['curl'],
+      types: [],
+      functions: ['send_notification']
+    },
+    python: {
+      keywords: ['import', 'def', 'return', 'as', 'from'],
+      types: ['dict', 'list', 'str', 'int', 'float'],
+      functions: ['send_notification', 'post', 'json']
+    },
+    javascript: {
+      keywords: ['async', 'await', 'function', 'const', 'return', 'let', 'var', 'if', 'else', 'try', 'catch'],
+      types: ['JSON', 'Promise', 'fetch'],
+      functions: ['sendNotification', 'stringify', 'json', 'post']
+    },
+    go: {
+      keywords: ['package', 'import', 'func', 'return', 'map', 'defer', 'if', 'nil', 'go', 'main'],
+      types: ['string', 'error', 'byte', 'int'],
+      functions: ['Marshal', 'NewRequest', 'Set', 'Do', 'Close', 'Sprintf']
+    }
+  }
+
+  const conf = langConfig[lang === 'javascript' ? 'javascript' : (lang === 'shell' ? 'shell' : lang)]
+  if (conf) {
+    if (conf.keywords.length) {
+      const regex = new RegExp(`\\b(${conf.keywords.join('|')})\\b(?![^<]*>)`, 'g')
+      html = html.replace(regex, `<span class="${colors.keyword}">$1</span>`)
+    }
+    if (conf.types.length) {
+      const regex = new RegExp(`\\b(${conf.types.join('|')})\\b(?![^<]*>)`, 'g')
+      html = html.replace(regex, `<span class="${colors.type}">$1</span>`)
+    }
+    if (conf.functions.length) {
+      const regex = new RegExp(`\\b(${conf.functions.join('|')})\\b(?![^<]*>)`, 'g')
+      html = html.replace(regex, `<span class="${colors.function}">$1</span>`)
+    }
+  }
+
+  // 4. 操作符和括号 (可选，这里处理基础)
+  // html = html.replace(/[:{}[\],]/g, `<span class="${colors.operator}">$&</span>`)
+
+  return html
+}
+
+const currentExample = computed(() => {
+  const code = examples.find(e => e.id === activeLang.value)?.code.value || ''
+  return highlightCode(code, activeLang.value)
+})
 </script>
 
 <template>
@@ -113,7 +278,7 @@ const shellExample = computed(() => `curl -s -X POST "http://${host.value}/api/v
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- API 接口规格 -->
-      <Card class="border bg-card shadow-sm flex flex-col overflow-hidden">
+      <Card class="border bg-card shadow-sm flex flex-col overflow-hidden h-[520px]">
         <CardHeader class="pb-3 shrink-0">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -124,9 +289,9 @@ const shellExample = computed(() => `curl -s -X POST "http://${host.value}/api/v
             </div>
           </div>
         </CardHeader>
-        <CardContent class="p-0 flex-1">
+        <CardContent class="p-0 flex-1 overflow-y-auto">
           <div
-            class="bg-zinc-50 dark:bg-zinc-950/50 p-5 font-code text-xs sm:text-sm leading-relaxed text-zinc-800 dark:text-zinc-300 relative group h-full">
+            class="bg-zinc-50 dark:bg-zinc-950/50 p-5 font-code text-xs sm:text-sm leading-relaxed text-zinc-800 dark:text-zinc-300 relative group min-h-full">
             <div class="flex items-center justify-between mb-6 border-b border-zinc-200 dark:border-zinc-800/50 pb-3">
               <div class="flex items-center gap-2">
                 <Badge class="bg-emerald-600 text-white border-none py-0 px-2 text-[10px]">POST</Badge>
@@ -189,45 +354,44 @@ const shellExample = computed(() => `curl -s -X POST "http://${host.value}/api/v
         </CardContent>
       </Card>
 
-      <!-- Shell 示例 -->
-      <Card class="border bg-card shadow-sm flex flex-col overflow-hidden">
-        <CardHeader class="pb-3 shrink-0">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="p-1.5 rounded-md bg-sky-500/10 text-sky-600">
-                <Terminal class="w-4 h-4" />
+      <!-- 调用示例 -->
+      <Card class="border bg-card shadow-sm flex flex-col overflow-hidden h-[520px]">
+        <Tabs v-model="activeLang" class="w-full flex flex-col h-full overflow-hidden">
+          <CardHeader class="pb-3 shrink-0 border-b">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="p-1.5 rounded-md bg-sky-500/10 text-sky-600">
+                  <Terminal class="w-4 h-4" />
+                </div>
+                <CardTitle class="text-sm font-bold uppercase tracking-wider">脚本调用示例</CardTitle>
               </div>
-              <CardTitle class="text-sm font-bold uppercase tracking-wider">Shell 脚本示例</CardTitle>
+              <div class="flex items-center gap-3">
+                <TabsList class="h-8 p-0.5 bg-muted/50 border">
+                  <TabsTrigger v-for="lang in examples" :key="lang.id" :value="lang.id"
+                    class="h-7 px-2.5 text-[11px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                    {{ lang.name }}
+                  </TabsTrigger>
+                </TabsList>
+                <Button variant="outline" size="sm"
+                  class="h-8 px-2.5 text-[11px] border-muted-foreground/30 hover:bg-muted transition-all"
+                  @click="copyToClipboard(currentExample, 'example')">
+                  <Check v-if="copiedBlock === 'example'" class="w-3.5 h-3.5 text-emerald-500 mr-1.5" />
+                  <Copy v-else class="w-3.5 h-3.5 mr-1.5" />
+                  复制代码
+                </Button>
+              </div>
             </div>
-            <Button variant="outline" size="sm"
-              class="h-7 px-2 text-[10px] border-muted-foreground/30 hover:bg-muted transition-all"
-              @click="copyToClipboard(shellExample, 'shell')">
-              <Check v-if="copiedBlock === 'shell'" class="w-3 h-3 text-emerald-500 mr-1.5" />
-              <Copy v-else class="w-3 h-3 mr-1.5" />
-              一键复制
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent class="p-0 flex-1">
-          <div
-            class="bg-zinc-50 dark:bg-zinc-950/50 p-5 font-code text-[12px] sm:text-[13px] leading-relaxed text-zinc-800 dark:text-zinc-300 h-full">
-            <div class="space-y-1">
-              <p><span class="text-zinc-500"># 使用 CURL 调用推送接口</span></p>
-              <p>curl -s -X POST <span class="text-emerald-600 dark:text-emerald-400">"http://{{ host
-                  }}/api/v1/notify/send"</span> \</p>
-              <p class="pl-4"> -H <span class="text-orange-600 dark:text-orange-400">"Content-Type:
-                  application/json"</span> \</p>
-              <p class="pl-4"> -H <span class="text-orange-600 dark:text-orange-400">"notify-token: {{ apiToken ||
-                'YOUR_TOKEN' }}"</span> \
-              </p>
-              <p class="pl-4"> -d <span
-                  class="text-orange-600 dark:text-orange-400">'{"channel_id":"ID","title":"任务完成","text":"脚本执行完毕"}'</span>
-              </p>
+          </CardHeader>
+          <CardContent class="p-0 flex-1 flex flex-col overflow-hidden">
+            <!-- 脚本区域：独立滚动 -->
+            <div class="flex-1 overflow-y-auto p-5 font-code text-[12px] sm:text-[13px] leading-relaxed text-zinc-800 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-950/50">
+              <pre class="whitespace-pre-wrap break-all" v-html="currentExample" />
             </div>
 
-            <div class="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <!-- 渠道列表区域：固定在底部，如有需要可独立滚动 -->
+            <div class="shrink-0 p-5 pt-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/20 dark:bg-zinc-900/10 max-h-[180px] overflow-y-auto">
               <span
-                class="text-zinc-500 block mb-2 uppercase text-[10px] font-bold tracking-widest flex items-center gap-1.5">
+                class="text-zinc-500 block mb-3 uppercase text-[10px] font-bold tracking-widest flex items-center gap-1.5">
                 <Hash class="w-3 h-3" /> 渠道 ID 快速查找
               </span>
               <div v-if="channels.length === 0" class="text-xs text-zinc-500 italic">暂无活跃渠道</div>
@@ -246,8 +410,8 @@ const shellExample = computed(() => `curl -s -X POST "http://${host.value}/api/v
                 </div>
               </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        </Tabs>
       </Card>
     </div>
 

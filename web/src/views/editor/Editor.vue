@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import XTerminal from '@/components/XTerminal.vue'
-import { Save, Play, Pencil, Eye, X, Download } from 'lucide-vue-next'
+import { Save, Play, Pencil, Eye, X, Download, Trash2 } from 'lucide-vue-next'
 import { api, type FileNode, type MiseLanguage } from '@/api'
 import { toast } from 'vue-sonner'
 import { PATHS, FILE_RUNNERS } from '@/constants'
@@ -446,8 +446,8 @@ onUnmounted(() => {
           <Button variant="ghost" size="sm" class="h-6 text-xs gap-1 px-2" @click="dialogsRef?.openRename(selectedPath)">
             <Pencil class="h-3 w-3" /> <span class="hidden sm:inline">重命名</span>
           </Button>
-          <Button variant="ghost" size="sm" class="h-6 text-xs gap-1 px-2" @click="dialogsRef?.openDelete(selectedPath)">
-            <X class="h-3 w-3 text-destructive" /> <span class="hidden sm:inline">删除</span>
+          <Button variant="ghost" size="sm" class="h-6 text-xs gap-1 px-2 hover:bg-destructive/10 transition-colors" @click="dialogsRef?.openDelete(selectedPath)">
+            <Trash2 class="h-3 w-3" /> <span class="hidden sm:inline">删除</span>
           </Button>
 
           <template v-if="selectedFile">

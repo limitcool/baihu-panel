@@ -195,9 +195,12 @@ func (s *MiseService) Versions(plugin string) ([]string, error) {
 func (s *MiseService) enrichInstallDates(languages []MiseLanguage) {
 	for i := range languages {
 		// 判断是否是 global
+		path := strings.ToLower(languages[i].Source.Path)
+		// 归一化路径分隔符
+		normPath := strings.ReplaceAll(path, "\\", "/")
 		if languages[i].Source.Type == "global" {
 			languages[i].IsGlobal = true
-		} else if strings.Contains(languages[i].Source.Path, ".config/mise/config.toml") {
+		} else if strings.Contains(normPath, "mise/config.toml") {
 			languages[i].IsGlobal = true
 		}
 

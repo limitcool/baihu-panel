@@ -17,11 +17,11 @@ func NewInitService(settingsService *SettingsService) *InitService {
 
 // Initialize 执行系统初始化，返回 UserService
 func (s *InitService) Initialize() *UserService {
-	logger.Info("[Init] 开始初始化系统...")
+	logger.Info("[Initialize] 开始初始化系统...")
 
 	// 初始化默认设置
 	if err := s.settingsService.InitSettings(); err != nil {
-		logger.Warnf("[Init] 初始化设置失败: %v", err)
+		logger.Warnf("[Initialize] 初始化设置失败: %v", err)
 	}
 
 	// 创建 UserService

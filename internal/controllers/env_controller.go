@@ -21,7 +21,7 @@ func NewEnvController(envService *services.EnvService) *EnvController {
 // @Description 返回系统是否已配置加密秘钥
 // @Tags Env
 // @Produce json
-// @Success 200 {object} vo.Response{data=bool} "成功"
+// @Success 200 {object} utils.Response{data=bool} "成功"
 // @Router /env/secret-status [get]
 // @Security BearerAuth
 func (ec *EnvController) GetSecretStatus(c *gin.Context) {

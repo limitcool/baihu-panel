@@ -105,14 +105,14 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-screen bg-muted/40">
+  <div class="flex h-screen overflow-hidden bg-muted/40">
     <!-- Mobile Menu Overlay -->
     <div v-if="mobileMenuOpen" class="fixed inset-0 bg-black/50 z-40 lg:hidden" @click="mobileMenuOpen = false" />
 
     <!-- Sidebar -->
     <aside :class="[
-      'fixed lg:static inset-y-0 z-50 w-44 border-r bg-background flex flex-col transition-[left] duration-200 ease-in-out',
-      mobileMenuOpen ? 'left-0' : '-left-44 lg:left-0'
+      'fixed lg:static inset-y-0 z-50 w-44 border-r bg-background flex flex-col transition-transform duration-300 ease-in-out',
+      mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
     ]">
       <div class="h-14 flex items-center justify-center px-4 font-semibold text-lg border-b relative">
         <span>{{ siteSettings.title }}</span>
@@ -140,7 +140,7 @@ onMounted(() => {
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-auto w-full">
+    <main class="flex-1 overflow-auto w-full lg:w-auto min-w-0 relative">
       <div class="h-14 border-b bg-background flex items-center justify-between px-4 lg:px-6">
         <div class="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" class="h-8 w-8 lg:hidden shrink-0" @click="mobileMenuOpen = true">

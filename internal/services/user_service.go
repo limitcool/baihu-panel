@@ -51,7 +51,8 @@ func (us *UserService) CreateUser(username, password, email, role string) *model
 
 func (us *UserService) GetUserByUsername(username string) *models.User {
 	var user models.User
-	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+	res := database.DB.Where("username = ?", username).Limit(1).Find(&user)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return nil
 	}
 	return &user
@@ -59,8 +60,9 @@ func (us *UserService) GetUserByUsername(username string) *models.User {
 
 func (us *UserService) GetUserByID(id string) (*models.User, error) {
 	var user models.User
-	if err := database.DB.Where("id = ?", id).First(&user).Error; err != nil {
-		return nil, err
+	res := database.DB.Where("id = ?", id).Limit(1).Find(&user)
+	if res.Error != nil || res.RowsAffected == 0 {
+		return nil, res.Error
 	}
 	return &user, nil
 }
@@ -122,8 +124,9 @@ func (us *UserService) InvalidateUserTokens(userID string) error {
 
 func (us *UserService) UpdateAccount(userID string, newUsername string) error {
 	var user models.User
-	if err := database.DB.Where("id = ?", userID).First(&user).Error; err != nil {
-		return err
+	res := database.DB.Where("id = ?", userID).Limit(1).Find(&user)
+	if res.Error != nil || res.RowsAffected == 0 {
+		return fmt.Errorf("未找到对应的用户")
 	}
 
 	updates := make(map[string]interface{})

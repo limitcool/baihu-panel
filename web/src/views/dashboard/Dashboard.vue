@@ -161,7 +161,7 @@ const renderLineChart = () => {
       { name: '执行失败', data: sendStats.value.map(item => item.failed) }
     ],
     chart: {
-      type: 'line',
+      type: 'line' as const,
       height: 300,
       toolbar: { show: false },
       background: 'transparent',
@@ -181,7 +181,7 @@ const renderLineChart = () => {
         opacity: 0.2
       }
     },
-    stroke: { curve: 'smooth', width: 3, lineCap: 'round' },
+    stroke: { curve: 'smooth' as const, width: 3, lineCap: 'round' as const },
     markers: {
       size: 6,
       colors: ['#3b82f6', '#10b981', '#ef4444'],
@@ -226,8 +226,8 @@ const renderLineChart = () => {
       padding: { top: 0, right: 5, bottom: 0, left: 0 }
     },
     legend: {
-      position: 'top',
-      horizontalAlign: 'right',
+      position: 'top' as const,
+      horizontalAlign: 'right' as const,
       floating: true,
       offsetY: -25,
       offsetX: -5,
@@ -276,7 +276,7 @@ const renderLineChart = () => {
     },
     responsive: [{ breakpoint: 768, options: { chart: { height: 260 }, legend: { position: 'top', horizontalAlign: 'center', floating: false, offsetY: 0 } } }]
   }
-  lineChart = new ApexCharts(container, options)
+  lineChart = new ApexCharts(container as HTMLElement, options as any)
   lineChart.render()
 }
 
@@ -299,7 +299,7 @@ const renderPieChart = () => {
   const options = {
     series: taskStats.value.map(item => item.count),
     chart: {
-      type: 'donut',
+      type: 'donut' as const,
       height: 260,
       toolbar: { show: false },
       background: 'transparent',
@@ -389,7 +389,7 @@ const renderPieChart = () => {
     },
     responsive: [{ breakpoint: 768, options: { chart: { height: 260 }, legend: { position: 'bottom' } } }]
   }
-  pieChart = new ApexCharts(container, options)
+  pieChart = new ApexCharts(container as HTMLElement, options as any)
   pieChart.render()
 }
 

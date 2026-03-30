@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import XTerminal from '@/components/XTerminal.vue'
-import { Save, Play, Pencil, Eye, X, Download } from 'lucide-vue-next'
+import { Save, Play, Pencil, Eye, X, Download, Trash2 } from 'lucide-vue-next'
 import { api, type FileNode, type MiseLanguage } from '@/api'
 import { toast } from 'vue-sonner'
 import { PATHS, FILE_RUNNERS } from '@/constants'
@@ -116,6 +116,20 @@ async function fetchPaths() {
 const editorRef = shallowRef()
 const isSmallScreen = ref(window.innerWidth < 1024)
 const editorFontSize = computed(() => isSmallScreen.value ? 12 : 13)
+
+const editorOptions = computed(() => ({
+  minimap: { enabled: false },
+  fontSize: editorFontSize.value,
+  lineNumbers: 'on' as const,
+  scrollBeyondLastLine: false,
+  readOnly: !isEditMode.value,
+  domReadOnly: !isEditMode.value,
+  automaticLayout: true,
+  tabSize: 2,
+  wordWrap: 'on' as const,
+  folding: true,
+  renderLineHighlight: 'all' as const,
+}))
 
 function handleEditorMount(editor: any) {
   editorRef.value = editor
@@ -446,8 +460,8 @@ onUnmounted(() => {
           <Button variant="ghost" size="sm" class="h-6 text-xs gap-1 px-2" @click="dialogsRef?.openRename(selectedPath)">
             <Pencil class="h-3 w-3" /> <span class="hidden sm:inline">重命名</span>
           </Button>
-          <Button variant="ghost" size="sm" class="h-6 text-xs gap-1 px-2" @click="dialogsRef?.openDelete(selectedPath)">
-            <X class="h-3 w-3 text-destructive" /> <span class="hidden sm:inline">删除</span>
+          <Button variant="ghost" size="sm" class="h-6 text-xs gap-1 px-2 hover:bg-destructive/10 transition-colors" @click="dialogsRef?.openDelete(selectedPath)">
+            <Trash2 class="h-3 w-3" /> <span class="hidden sm:inline">删除</span>
           </Button>
 
           <template v-if="selectedFile">
@@ -473,14 +487,7 @@ onUnmounted(() => {
       </div>
       <div class="flex-1">
         <vue-monaco-editor v-if="selectedFile" v-model:value="fileContent" :language="getLanguage(selectedFile)"
-          theme="vs-dark" :options="{
-            minimap: { enabled: false },
-            fontSize: editorFontSize,
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            readOnly: !isEditMode,
-            domReadOnly: !isEditMode
-          }" @mount="handleEditorMount" />
+          theme="vs-dark" :options="editorOptions" @mount="handleEditorMount" />
         <div v-else class="h-full flex items-center justify-center text-muted-foreground text-sm">
           <span class="lg:hidden">从上方选择文件开始编辑</span>
           <span class="hidden lg:inline">从左侧选择文件开始编辑</span>

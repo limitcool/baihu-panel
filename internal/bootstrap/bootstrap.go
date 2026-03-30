@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/engigu/baihu-panel/internal/constant"
 	"github.com/engigu/baihu-panel/internal/database"
@@ -29,17 +30,24 @@ func New() *App {
 	return app
 }
 
-// InitBasic 初始化基础环境（配置和数据库），不启动后台服务和路由
 func InitBasic() *App {
 	app := &App{}
 	utils.InitRuntime()
-	app.initConfig()
+	utils.InitSecretKey()
+	
+	// 自动加载配置 (内部会自动处理 BH_CONFIG_PATH 环境变量与默认路径的优先级)
+	app.initConfigWithPath("")
 	app.initDatabase()
+	logger.Infof("[System] 低于1.0.11版本升级最新版本错误指引: https://github.com/engigu/baihu-panel/issues/64")
 	return app
 }
 
 func (a *App) initConfig() {
-	cfg, err := services.LoadConfig(constant.ConfigPath)
+	a.initConfigWithPath(constant.ConfigPath)
+}
+
+func (a *App) initConfigWithPath(path string) {
+	cfg, err := services.LoadConfig(path)
 	if err != nil {
 		logger.Fatalf("Failed to load config: %v", err)
 	}
@@ -82,20 +90,31 @@ func (a *App) initDatabase() {
 		Password: a.Config.Database.Password,
 		DBName:   a.Config.Database.DBName,
 		Path:     a.Config.Database.Path,
+		DSN:      a.Config.Database.DSN,
 	}
 
 	if err := database.Init(dbCfg); err != nil {
 		logger.Fatalf("Failed to init database: %v", err)
 	}
 
+	// 记录各个初始化阶段的时间
+	startTime := time.Now()
+
 	// 执行 V3 迁移（ID 变更迁移）
 	if err := services.RunMigrationV3(); err != nil {
 		logger.Fatalf("Failed to run V3 migration: %v", err)
 	}
+	v3Duration := time.Since(startTime)
+	logger.Infof("[Database] V3 迁移检查完成, 耗时: %v", v3Duration)
 
+	// 执行表结构同步
+	migrateStart := time.Now()
 	if err := database.Migrate(); err != nil {
 		logger.Fatalf("Failed to migrate database: %v", err)
 	}
+	migrateDuration := time.Since(migrateStart)
+	logger.Infof("[Database] 表结构同步完成, 耗时: %v", migrateDuration)
+	logger.Infof("[Database] 数据库总初始化耗时: %v", time.Since(startTime))
 }
 
 func (a *App) initRouter() {

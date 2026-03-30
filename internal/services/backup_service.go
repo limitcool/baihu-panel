@@ -417,7 +417,8 @@ func (s *BackupService) addDirToZip(zipWriter *zip.Writer, srcDir, prefix string
 
 func (s *BackupService) GetBackupFile() string {
 	var setting models.Setting
-	if err := database.DB.Where("section = ? AND `key` = ?", BackupSection, BackupFileKey).First(&setting).Error; err != nil {
+	res := database.DB.Where(&models.Setting{Section: BackupSection, Key: BackupFileKey}).Limit(1).Find(&setting)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return ""
 	}
 	return string(setting.Value)
@@ -427,7 +428,7 @@ func (s *BackupService) ClearBackup() error {
 	filePath := s.GetBackupFile()
 	if filePath != "" {
 		os.Remove(filePath)
-		database.DB.Where("section = ? AND `key` = ?", BackupSection, BackupFileKey).Delete(&models.Setting{})
+		database.DB.Where(&models.Setting{Section: BackupSection, Key: BackupFileKey}).Delete(&models.Setting{})
 	}
 	return nil
 }

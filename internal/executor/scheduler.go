@@ -69,6 +69,7 @@ type ExecutionRequest struct {
 	Command   string              // 命令
 	WorkDir   string              // 工作目录
 	Envs      []string            // 环境变量
+	Secrets   []string            // 需要脱敏的密码
 	Timeout   int                 // 超时时间（分钟）
 	Languages []map[string]string // 语言环境配置
 	UseMise   bool                // 是否使用 mise
@@ -366,6 +367,8 @@ func (s *Scheduler) executeTask(req *ExecutionRequest) (*ExecutionResult, error)
 
 	// 如果指定使用 mise，则预先构建好带 mise 的命令，这样 OnTaskExecuting 记录的就是完整命令
 	if req.UseMise {
+		// 先注入 NODE_PATH (由于调度器会把 UseMise 置为 false，所以必须在这里提前处理)
+		utils.InjectNodePath(&req.Envs, req.Languages)
 		req.Command = utils.BuildMiseCommand(req.Command, req.Languages)
 		req.UseMise = false
 	}
@@ -465,9 +468,12 @@ func (s *Scheduler) executeTask(req *ExecutionRequest) (*ExecutionResult, error)
 		LogID:  req.LogID, // 传递 LogID
 	}
 
+	// 统一获取输出并调用封装的脱敏函数
+	rawStr := utils.MaskSecrets(combinedBuf.String(), req.Secrets)
+
 	if execResult != nil {
 		result.Success = execResult.Status == constant.TaskStatusSuccess
-		result.Output = combinedBuf.String()
+		result.Output = rawStr
 		result.Status = execResult.Status
 		result.Duration = execResult.Duration
 		result.ExitCode = execResult.ExitCode
@@ -479,7 +485,7 @@ func (s *Scheduler) executeTask(req *ExecutionRequest) (*ExecutionResult, error)
 		result.StartTime = start
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(result.StartTime).Milliseconds()
-		result.Output = combinedBuf.String()
+		result.Output = rawStr
 	}
 
 	if execErr != nil {

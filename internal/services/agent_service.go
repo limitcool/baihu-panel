@@ -80,7 +80,8 @@ func (s *AgentService) DeleteToken(id string) error {
 // ValidateToken 验证令牌
 func (s *AgentService) ValidateToken(token string) (*models.AgentToken, error) {
 	var agentToken models.AgentToken
-	if err := database.DB.Where("token = ?", token).First(&agentToken).Error; err != nil {
+	res := database.DB.Where("token = ?", token).Limit(1).Find(&agentToken)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return nil, &ServiceError{Message: "无效的令牌"}
 	}
 
@@ -120,7 +121,8 @@ func (s *AgentService) RegisterByToken(token string, machineID string, ip string
 	// 如果提供了 machine_id，先检查是否已存在
 	if machineID != "" {
 		var existing models.Agent
-		if err := database.DB.Where("machine_id = ?", machineID).First(&existing).Error; err == nil {
+		res := database.DB.Where("machine_id = ?", machineID).Limit(1).Find(&existing)
+		if res.Error == nil && res.RowsAffected > 0 {
 			// 已存在，更新 token 和状态，复用已有 Agent
 			now := models.LocalTime(time.Now())
 			database.DB.Model(&existing).Updates(map[string]interface{}{
@@ -171,7 +173,8 @@ func (s *AgentService) Register(req *models.AgentRegisterRequest, ip string) (*m
 
 	// 检查是否已存在同名 Agent
 	var existing models.Agent
-	if err := database.DB.Where("name = ?", req.Name).First(&existing).Error; err == nil {
+	res := database.DB.Where("name = ?", req.Name).Limit(1).Find(&existing)
+	if res.Error == nil && res.RowsAffected > 0 {
 		return nil, "", &ServiceError{Message: "Agent 名称已存在"}
 	}
 
@@ -223,7 +226,8 @@ func (s *AgentService) Delete(id string) error {
 // GetByID 根据 ID 获取 Agent
 func (s *AgentService) GetByID(id string) *models.Agent {
 	var agent models.Agent
-	if err := database.DB.Where("id = ?", id).First(&agent).Error; err != nil {
+	res := database.DB.Where("id = ?", id).Limit(1).Find(&agent)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return nil
 	}
 	return &agent
@@ -232,7 +236,8 @@ func (s *AgentService) GetByID(id string) *models.Agent {
 // GetByToken 根据 Token 获取 Agent
 func (s *AgentService) GetByToken(token string) *models.Agent {
 	var agent models.Agent
-	if err := database.DB.Where("token = ?", token).First(&agent).Error; err != nil {
+	res := database.DB.Where("token = ?", token).Limit(1).Find(&agent)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return nil
 	}
 	return &agent
@@ -241,7 +246,8 @@ func (s *AgentService) GetByToken(token string) *models.Agent {
 // GetByMachineID 根据 MachineID 获取 Agent
 func (s *AgentService) GetByMachineID(machineID string) *models.Agent {
 	var agent models.Agent
-	if err := database.DB.Where("machine_id = ?", machineID).First(&agent).Error; err != nil {
+	res := database.DB.Where("machine_id = ?", machineID).Limit(1).Find(&agent)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return nil
 	}
 	return &agent
@@ -329,10 +335,11 @@ func (s *AgentService) GetTasks(agentID string) []models.AgentTask {
 			}
 		}
 
+		var secrets []string
 		if allEnvs {
-			envVars = envService.GetAllEnvVars()
+			envVars, secrets = envService.GetAllEnvVarsAndSecrets()
 		} else if string(task.Envs) != "" {
-			envVars = envService.GetEnvVarsByIDs(string(task.Envs))
+			envVars, secrets = envService.GetEnvVarsAndSecretsByIDs(string(task.Envs))
 		}
 
 		envVarsStr := executor.FormatEnvVars(envVars)
@@ -345,8 +352,9 @@ func (s *AgentService) GetTasks(agentID string) []models.AgentTask {
 			Timeout:     task.Timeout,
 			WorkDir:     task.WorkDir,
 			Envs:        envVarsStr,
-			Languages:   task.Languages,
+			Languages:   []map[string]string(task.Languages),
 			RandomRange: task.RandomRange,
+			Secrets:     secrets,
 			Enabled:     task.Enabled,
 		}
 	}

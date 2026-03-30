@@ -7,6 +7,7 @@ import (
 
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -64,7 +65,8 @@ func (sc *SettingsController) ChangePassword(c *gin.Context) {
 
 	userID := c.GetString("userID")
 	var user *models.User
-	if err := database.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+	res := database.DB.Where("id = ?", userID).Limit(1).Find(&user)
+	if res.Error != nil || res.RowsAffected == 0 {
 		utils.NotFound(c, "用户不存在")
 		return
 	}
@@ -301,16 +303,44 @@ func (sc *SettingsController) GetAbout(c *gin.Context) {
 	// 运行时间
 	uptime := formatDuration(time.Since(constant.StartTime))
 
+	// 获取远程最新版本
+	remoteVersion := ""
+	client := &http.Client{Timeout: 2 * time.Second}
+	req, err := http.NewRequest("GET", "https://api.github.com/repos/engigu/baihu-panel/releases/latest", nil)
+	if err == nil {
+		req.Header.Set("User-Agent", "baihu-panel")
+		if resp, err := client.Do(req); err == nil {
+			defer resp.Body.Close()
+			var release struct {
+				TagName string `json:"tag_name"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&release); err == nil {
+				remoteVersion = release.TagName
+			}
+		}
+	}
+
 	utils.Success(c, gin.H{
-		"version":    constant.Version,
-		"build_time": constant.BuildTime,
-		"mem_usage":  memUsage,
-		"goroutines": runtime.NumGoroutine(),
-		"uptime":     uptime,
-		"task_count": taskCount,
-		"log_count":  logCount,
-		"env_count":  envCount,
+		"version":        constant.Version,
+		"remote_version": remoteVersion,
+		"build_time":     constant.BuildTime,
+		"mem_usage":      memUsage,
+		"goroutines":     runtime.NumGoroutine(),
+		"uptime":         uptime,
+		"task_count":     taskCount,
+		"log_count":      logCount,
+		"env_count":      envCount,
 	})
+}
+
+// GetChangelog 获取更新日志
+func (sc *SettingsController) GetChangelog(c *gin.Context) {
+	content, err := os.ReadFile("docs/guide/changelog.md")
+	if err != nil {
+		utils.Success(c, "暂无更新日志")
+		return
+	}
+	utils.Success(c, string(content))
 }
 
 // formatBytes 格式化字节数

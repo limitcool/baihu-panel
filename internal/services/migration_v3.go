@@ -81,9 +81,10 @@ func RunMigrationV3() error {
 	// 0. 检查迁移标记，防止重复迁移逻辑被误判触发
 	if db.Migrator().HasTable(&models.Setting{}) {
 		var migrationFlag models.Setting
-		err := db.Where("section = ? AND `key` = ?", "system", "migration_v3_success").First(&migrationFlag).Error
-		if err == nil && migrationFlag.Value == "true" {
+		res := db.Where(&models.Setting{Section: "system", Key: "migration_v3_success"}).Limit(1).Find(&migrationFlag)
+		if res.Error == nil && res.RowsAffected > 0 && migrationFlag.Value == "true" {
 			// 如果已经是字符串 ID 模式，双重确认
+			logger.Info("[MigrationV3] 系统已处于 V3 模式，跳过检查")
 			return nil
 		}
 	}
@@ -150,8 +151,8 @@ func markMigrationSuccess(db *gorm.DB) error {
 		return nil
 	}
 	var flag models.Setting
-	err := db.Where("section = ? AND `key` = ?", "system", "migration_v3_success").First(&flag).Error
-	if err != nil {
+	res := db.Where(&models.Setting{Section: "system", Key: "migration_v3_success"}).Limit(1).Find(&flag)
+	if res.Error != nil || res.RowsAffected == 0 {
 		// 创建或更新
 		flag = models.Setting{
 			ID:      utils.GenerateID(),

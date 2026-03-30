@@ -1,8 +1,50 @@
 package utils
 
 import (
+	"os/exec"
 	"strings"
+	"sync"
 )
+
+var nodePathCache sync.Map
+
+// GetMiseNodePath 获取指定版本的 node 全局包路径，使用内存缓存避免重复获取
+func GetMiseNodePath(version string) string {
+	if version == "" {
+		version = "latest"
+	}
+
+	if val, ok := nodePathCache.Load(version); ok {
+		return val.(string)
+	}
+
+	cmd := exec.Command("mise", "where", "node@"+version)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		nodeDir := strings.TrimSpace(string(out))
+		if nodeDir != "" {
+			// 采用双路径策略：lib/node_modules 是标准路径，lib 是某些环境（如 mise Docker）下的特殊路径
+			// 通过冒号分隔，让 Node.js 按顺序搜索，保证最大兼容性
+			nodePath := nodeDir + "/lib/node_modules:" + nodeDir + "/lib"
+			nodePathCache.Store(version, nodePath)
+			return nodePath
+		}
+	}
+
+	return ""
+}
+
+// InjectNodePath 检查语言环境中是否有 node，如果有则自动获取并注入 NODE_PATH 到环境变量切片中
+func InjectNodePath(envs *[]string, languages []map[string]string) {
+	for _, lang := range languages {
+		if lang["name"] == "node" {
+			if nodePath := GetMiseNodePath(lang["version"]); nodePath != "" {
+				*envs = append(*envs, "NODE_PATH="+nodePath)
+			}
+			break
+		}
+	}
+}
 
 // BuildMiseCommand 构建多语言 mise 执行命令 (字符串形式)
 func BuildMiseCommand(command string, languages []map[string]string) string {

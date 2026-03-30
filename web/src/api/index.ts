@@ -85,6 +85,15 @@ export const api = {
     create: (data: Partial<Task>) => request<Task>('/tasks', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Task>) => request<Task>(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request(`/tasks/${id}`, { method: 'DELETE' }),
+    batchDelete: (ids: string[]) => request<{ count: number }>('/tasks/batch-delete', { method: 'POST', body: JSON.stringify({ ids }) }),
+    batchDeleteByQuery: (params?: { name?: string, agent_id?: string, tags?: string, type?: string }) => {
+      const query = new URLSearchParams()
+      if (params?.name) query.append('name', params.name)
+      if (params?.agent_id) query.append('agent_id', params.agent_id)
+      if (params?.tags) query.append('tags', params.tags)
+      if (params?.type && params.type !== 'all') query.append('type', params.type)
+      return request<{ count: number }>(`/tasks/batch-by-query?${query.toString()}`, { method: 'DELETE' })
+    },
     execute: (id: string) => request<ExecutionResult>(`/execute/task/${id}`, { method: 'POST' }),
     stop: (logID: string) => request(`/tasks/stop/${logID}`, { method: 'POST' })
   },
@@ -95,13 +104,15 @@ export const api = {
     delete: (id: string) => request(`/scripts/${id}`, { method: 'DELETE' })
   },
   env: {
-    list: (params?: { page?: number; page_size?: number; name?: string }) => {
+    list: (params?: { page?: number; page_size?: number; name?: string; type?: string }) => {
       const query = new URLSearchParams()
       if (params?.page) query.set('page', String(params.page))
       if (params?.page_size) query.set('page_size', String(params.page_size))
       if (params?.name) query.set('name', params.name)
+      if (params?.type && params.type !== 'all') query.set('type', params.type)
       return request<EnvListResponse>(`/env?${query}`)
     },
+    secretStatus: () => request<boolean>('/env/secret-status'),
     all: () => request<EnvVar[]>('/env/all'),
     tasks: (id: string) => request<Task[]>(`/env/${id}/tasks`),
     create: (data: Partial<EnvVar>) => request<EnvVar>('/env', { method: 'POST', body: JSON.stringify(data) }),
@@ -154,6 +165,7 @@ export const api = {
       request('/settings/scheduler', { method: 'PUT', body: JSON.stringify(data) }),
     getPaths: () => request<{ scripts_dir: string }>('/settings/paths'),
     getAbout: () => request<AboutInfo>('/settings/about'),
+    getChangelog: () => request<string>('/settings/changelog'),
     get: (section: string, key: string) => request<string>(`/settings/${section}/${key}`),
     generateToken: (section: string, key: string) =>
       request<string>(`/settings/${section}/${key}/generate`, { method: 'POST' }),
@@ -283,7 +295,12 @@ export const api = {
     sync: () => request<void>('/mise/sync', { method: 'POST' }),
     plugins: () => request<string[]>('/mise/plugins'),
     versions: (plugin: string) => request<string[]>(`/mise/versions?plugin=${plugin}`),
-    verifyCommand: (plugin: string, version: string) => request<{ command: string }>(`/mise/verify-cmd?plugin=${plugin}&version=${version}`)
+    verifyCommand: (plugin: string, version: string) => request<{ command: string }>(`/mise/verify-cmd?plugin=${plugin}&version=${version}`),
+    useGlobal: (plugin: string, version: string) => request<void>('/mise/use-global', { method: 'POST', body: JSON.stringify({ plugin, version }) }),
+    unsetGlobal: (plugin: string, version: string) => request<void>('/mise/unset-global', { method: 'POST', body: JSON.stringify({ plugin, version }) }),
+    getEnvs: () => request<Record<string, string>>('/mise/envs'),
+    setEnv: (key: string, value: string) => request<void>('/mise/envs', { method: 'POST', body: JSON.stringify({ key, value }) }),
+    unsetEnv: (key: string) => request<void>(`/mise/envs?key=${key}`, { method: 'DELETE' })
   },
   terminal: {
     cmds: () => request<{ name: string, description: string }[]>('/terminal/cmds')
@@ -300,6 +317,8 @@ export const api = {
     getBindings: () => request<NotifyBinding[]>('/notify/bindings'),
     saveBinding: (data: Partial<NotifyBinding>) =>
       request<NotifyBinding>('/notify/bindings', { method: 'POST', body: JSON.stringify(data) }),
+    saveBindingsBatch: (data: { type: string; data_id: string; bindings: Partial<NotifyBinding>[] }) =>
+      request('/notify/bindings/batch', { method: 'POST', body: JSON.stringify(data) }),
     deleteBinding: (id: string) => request('/notify/bindings/' + id, { method: 'DELETE' }),
     send: (data: { channel_id: string; title: string; text: string }) =>
       request<NotifyResult>('/notify/send', { method: 'POST', body: JSON.stringify(data) })
@@ -362,7 +381,13 @@ export interface RepoConfig {
   proxy: string
   proxy_url: string
   auth_token: string
+  whitelist_paths?: string
+  blacklist?: string
+  dependence?: string
+  extensions?: string
+  auto_add_cron?: boolean
   concurrency?: number
+  repo_source?: string
 }
 
 export interface ExecutionResult {
@@ -392,7 +417,9 @@ export interface EnvVar {
   name: string
   value: string
   remark: string
+  type: string
   hidden: boolean
+  enabled: boolean
 }
 
 export interface EnvListResponse {
@@ -450,6 +477,7 @@ export interface LogDetail {
 
 export interface AboutInfo {
   version: string
+  remote_version?: string
   build_time: string
   mem_usage: string
   goroutines: number
@@ -559,7 +587,7 @@ export interface MiseLanguage {
   plugin: string
   version: string
   source: { type?: string; path?: string } | string
-  active: boolean
+  is_global: boolean
   install_path?: string
   installed_at?: string  // 安装日期
 }
@@ -610,8 +638,14 @@ export interface NotifyBinding {
   event: string
   way_id: string
   data_id: string
+  extra?: string
   created_at?: string
   updated_at?: string
+}
+
+export interface BindingExtra {
+  enable_log: boolean
+  log_limit: number
 }
 
 export interface NotifyResult {

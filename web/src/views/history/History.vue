@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Pagination from '@/components/Pagination.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import LogViewer from './LogViewer.vue'
+import Ansi from 'ansi-to-vue3'
 import {
   RefreshCw, X, Search, Maximize2, GitBranch, Terminal,
   CheckCircle2, XCircle, AlertCircle, Ban, Clock, Zap as ZapIcon, Check, Trash2
 } from 'lucide-vue-next'
-import LogViewer from './LogViewer.vue'
-import LogTerminal from '@/components/LogTerminal.vue'
 import { api, type TaskLog } from '@/api'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -27,7 +27,6 @@ import {
 import { toast } from 'vue-sonner'
 import { useSiteSettings } from '@/composables/useSiteSettings'
 import TextOverflow from '@/components/TextOverflow.vue'
-import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
 const { pageSize } = useSiteSettings()
@@ -57,10 +56,9 @@ const wsContent = ref('')
 const isWsLoading = ref(false)
 let logSocket: WebSocket | null = null
 
-const { resolvedTheme } = useTheme()
 
 const decompressedOutput = computed(() => {
-  return wsContent.value
+  return wsContent.value || '无输出'
 })
 
 async function loadLogs() {
@@ -351,7 +349,7 @@ watch(() => route.query, (newQuery) => {
       </div>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-4">
+    <div class="flex flex-col lg:flex-row gap-4" style="height: 520px;">
       <!-- 日志列表 -->
       <div class="flex-1 min-w-0 rounded-lg border bg-card overflow-hidden flex flex-col">
         <!-- 小屏表头 -->
@@ -489,7 +487,7 @@ watch(() => route.query, (newQuery) => {
 
       <!-- 日志详情侧边栏 -->
       <div v-if="selectedLog"
-        class="w-full lg:w-[480px] rounded-lg border bg-card flex flex-col overflow-hidden shrink-0 max-h-[80vh] lg:max-h-none">
+        class="w-full lg:w-[480px] rounded-lg border bg-card flex flex-col overflow-hidden shrink-0">
         <div class="flex items-center justify-between px-4 h-11 border-b bg-muted/20">
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-muted-foreground">日志详情</span>
@@ -567,17 +565,9 @@ watch(() => route.query, (newQuery) => {
               <Maximize2 class="h-3.5 w-3.5" />
             </Button>
           </div>
-          <div class="flex-1 overflow-hidden min-h-[160px] relative"
-            :class="resolvedTheme === 'dark' ? 'bg-zinc-950' : 'bg-zinc-100'" ref="sideLogContainer">
-            <LogTerminal v-if="decompressedOutput" :content="decompressedOutput" :theme="resolvedTheme" />
-            <div v-else-if="!isWsLoading"
-              class="absolute inset-0 flex items-center justify-center text-zinc-500 font-mono text-xs italic">
-              无日志输出
-            </div>
-            <div v-if="isWsLoading"
-              class="px-4 py-2 text-sm text-zinc-500 italic border-t border-zinc-200 dark:border-zinc-800 absolute bottom-0 left-0 w-full bg-inherit/80 backdrop-blur-sm">
-              连接中...
-            </div>
+          <div class="flex-1 overflow-auto bg-black/5 dark:bg-white/5 min-h-[160px]">
+            <div class="p-4 text-xs font-mono whitespace-pre-wrap break-all log-pre leading-relaxed"><Ansi>{{ decompressedOutput }}</Ansi></div>
+            <div v-if="isWsLoading" class="p-4 text-sm text-muted-foreground italic">连接中...</div>
           </div>
         </div>
       </div>
@@ -598,7 +588,8 @@ watch(() => route.query, (newQuery) => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>取消</AlertDialogCancel>
-          <AlertDialogAction @click="handleClearLogs" variant="destructive">
+          <AlertDialogAction @click="handleClearLogs"
+            class="bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:text-white dark:hover:bg-red-700">
             清空
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -616,7 +607,8 @@ watch(() => route.query, (newQuery) => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>取消</AlertDialogCancel>
-          <AlertDialogAction @click="handleDeleteLog" variant="destructive">
+          <AlertDialogAction @click="handleDeleteLog"
+            class="bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:text-white dark:hover:bg-red-700">
             删除
           </AlertDialogAction>
         </AlertDialogFooter>

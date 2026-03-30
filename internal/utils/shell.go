@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 // GetShell 返回当前操作系统的 shell 和参数
@@ -68,4 +69,14 @@ func NewShellCmd() *exec.Cmd {
 func NewShellCommandCmd(command string) *exec.Cmd {
 	shell, args := GetShellCommand(command)
 	return exec.Command(shell, args...)
+}
+
+// QuotePath 转义并包裹路径，防止 Shell 注入
+func QuotePath(path string) string {
+	if path == "" {
+		return "''"
+	}
+	// 在 Unix-like 系统中，单引号包裹是最安全的
+	// 需要将路径中的 ' 替换为 '\'' (结束当前引号，转义一个单引号，重新开启引号)
+	return "'" + strings.ReplaceAll(path, "'", "'\\''") + "'"
 }

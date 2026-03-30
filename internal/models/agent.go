@@ -61,6 +61,7 @@ type AgentTask struct {
 	Envs      string              `json:"envs"`
 	Languages   []map[string]string `json:"languages"`
 	RandomRange int                 `json:"random_range"`
+	Secrets     []string            `json:"secrets"`
 	Enabled     bool                `json:"enabled"`
 }
 
@@ -82,6 +83,10 @@ func (t AgentTask) GetSchedule() string {
 
 func (t AgentTask) GetRandomRange() int {
 	return t.RandomRange
+}
+
+func (t AgentTask) GetSecrets() []string {
+	return t.Secrets
 }
 
 // AgentTaskResult Agent 上报的任务执行结果

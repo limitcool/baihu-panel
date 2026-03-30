@@ -127,7 +127,8 @@ func (lc *LogController) GetLogDetail(c *gin.Context) {
 	}
 
 	var log models.TaskLog
-	if err := database.DB.Where("id = ?", id).First(&log).Error; err != nil {
+	res := database.DB.Where("id = ?", id).Limit(1).Find(&log)
+	if res.Error != nil || res.RowsAffected == 0 {
 		utils.NotFound(c, "日志不存在")
 		return
 	}

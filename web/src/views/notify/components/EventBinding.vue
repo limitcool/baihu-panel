@@ -10,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { X, Plus, Shield, Terminal, Search } from 'lucide-vue-next'
+import { X, Plus, Shield, Terminal, Search, FileText } from 'lucide-vue-next'
+import { Switch } from '@/components/ui/switch'
 import type { NotifyChannel, ChannelType, EventType, NotifyBinding, Task } from '@/api'
 
 const props = defineProps<{
@@ -87,7 +88,8 @@ function addChannelToEvent(eventType: string, bindingType: 'system' | 'task') {
     type: bindingType,
     event: eventType,
     way_id: channelId,
-    data_id: dataId
+    data_id: dataId,
+    extra: JSON.stringify({ enable_log: false, log_limit: 1000 })
   }
 
   emit('save', [newBinding])
@@ -104,6 +106,49 @@ function getAvailableChannels(eventType: string, bindingType: 'system' | 'task')
 // 删除绑定
 function removeBinding(binding: NotifyBinding) {
   emit('delete', binding.id)
+}
+
+// 日志推送开关逻辑
+function isLogEnabled(binding: NotifyBinding): boolean {
+  if (!binding.extra) return false
+  try {
+    const extra = JSON.parse(binding.extra)
+    return extra.enable_log === true
+  } catch {
+    return false
+  }
+}
+
+function getLogLimit(binding: NotifyBinding): number {
+  if (!binding.extra) return 1000
+  try {
+    const extra = JSON.parse(binding.extra)
+    return extra.log_limit || 1000
+  } catch {
+    return 1000
+  }
+}
+
+function toggleLog(binding: NotifyBinding, enabled: boolean) {
+  const extra: any = binding.extra ? JSON.parse(binding.extra) : { log_limit: 1000 }
+  extra.enable_log = enabled
+
+  const updatedBinding: Partial<NotifyBinding> = {
+    ...binding,
+    extra: JSON.stringify(extra)
+  }
+  emit('save', [updatedBinding])
+}
+
+function setLogLimit(binding: NotifyBinding, limit: number) {
+  const extra: any = binding.extra ? JSON.parse(binding.extra) : { enable_log: false }
+  extra.log_limit = limit || 1000
+
+  const updatedBinding: Partial<NotifyBinding> = {
+    ...binding,
+    extra: JSON.stringify(extra)
+  }
+  emit('save', [updatedBinding])
 }
 </script>
 
@@ -253,15 +298,40 @@ function removeBinding(binding: NotifyBinding) {
               </div>
 
               <!-- 已绑定渠道 -->
-              <div class="flex flex-wrap gap-2 mb-3 min-h-[32px] items-center">
+              <div class="flex flex-wrap gap-3 mb-3 min-h-[40px] items-center">
                 <template v-if="getBindings(event.type, false).length > 0">
                   <div v-for="binding in getBindings(event.type, false)" :key="binding.id"
-                    class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-secondary/50 border text-[11px] font-medium">
-                    <span class="truncate max-w-[100px]">{{ getChannelName(binding.way_id) }}</span>
-                    <button @click="removeBinding(binding)"
-                      class="hover:text-destructive p-0.5 rounded-sm transition-colors">
-                      <X class="w-3 h-3" />
-                    </button>
+                    class="group relative flex flex-col gap-1.5 p-2 rounded-lg bg-secondary/30 border border-border/50 text-[11px] font-medium min-w-[130px] hover:bg-secondary/50 transition-all">
+                    <div class="flex items-center justify-between gap-1.5">
+                      <span class="truncate max-w-[90px] text-xs">{{ getChannelName(binding.way_id) }}</span>
+                      <button @click="removeBinding(binding)"
+                        class="text-muted-foreground hover:text-destructive p-0.5 rounded-md hover:bg-destructive/10 transition-colors">
+                        <X class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <!-- 日志推送开关 -->
+                    <div class="flex flex-col mt-1 pt-1.5 border-t border-border/30">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                          <FileText class="w-2.5 h-2.5" />
+                          <span class="text-[9px]">发送日志</span>
+                        </div>
+                        <Switch :model-value="isLogEnabled(binding)"
+                          @update:model-value="(val: boolean) => toggleLog(binding, val)" class="scale-75 origin-right" />
+                      </div>
+
+                      <!-- 日志字数限制配置 -->
+                      <div v-if="isLogEnabled(binding)"
+                        class="flex items-center gap-1 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-background/50 border border-border/30 focus-within:border-primary/30 transition-all shadow-sm">
+                          <input type="text" inputmode="numeric" :value="getLogLimit(binding)"
+                            @change="(e: any) => setLogLimit(binding, parseInt(e.target.value.replace(/\D/g, '')))"
+                            class="w-10 h-3.5 text-center text-[9px] font-mono bg-transparent border-none outline-none focus:ring-0 p-0" />
+                          <span class="text-[8px] text-muted-foreground opacity-40 select-none">字</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </template>
                 <span v-else class="text-[11px] text-muted-foreground italic">未绑定渠道</span>

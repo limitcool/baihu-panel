@@ -13,7 +13,9 @@
 
 ### 最近更新
 
-**2026.03.05** - **API 文档重构** 重构 OpenAPI 认证体系，支持站点级 Token 配置与 Basic Auth 保护；新增设计感十足的全局 **404 页面**。  
+**2026.03.27** - **安全机密管理 (GitHub Secrets 风格)**：新增系统级机密（Secret）管理功能。支持 AES-GCM 工业级加密存储，秘钥内存留存销毁；支持执行日志自动脱敏打码；支持仅在计划任务调度时按需注入，终端与测试运行物理隔离，全面提升敏感配置安全性。  
+**2026.03.19** - **仓库同步增强**：新增对青龙仓库格式指令的深度兼容，支持从远程 Git 仓库自动同步脚本并基于注释解析自动创建面板任务，支持白名单、黑名单、依赖保留等高级筛选特性。  
+**2026.03.05** - **API 文档重构** 重构 OpenAPI 认证体系，支持站点级 Token 配置与 Basic Auth 保护。  
 **2026.03.04** - 新增内置消息推送系统：全新原生支持企业微信、钉钉、飞书、Telegram、Bark、邮件等十余种主流渠道的推送，接入系统级事件通知自动捕获，告别原有必配外部推送服务的繁琐历史  
 **2026.02.13** - 重构任务执行引擎：深度集成 Mise 运行时管理，支持 Python, Node.js, Go, Rust, PHP 等几乎所有主流语言的动态安装与多版本切换，同步上线跨语言统一依赖管理系统  
 **2026.02.11** - 增强安全性：首次启动使用随机密码并打印在日志中，登录接口增加防暴力破解，文件系统操作增加路径穿越锁定  
@@ -45,7 +47,8 @@
 - **脚本管理：** 在线代码编辑器，支持文件上传、压缩包解压
 - **在线终端：** WebSocket 实时终端，命令执行结果实时输出
 - **消息推送：** 内置强大消息推送与通知引擎，无缝兼容主流渠道，支持系统级事件告警
-- **环境变量：** 安全存储敏感配置，任务执行时自动注入
+- **机密管理：** **(New)** 类似 GitHub Secrets 的安全存储，支持 AES-GCM 加密，日志自动打码，仅在调度时注入
+- **环境变量：** 存储普通配置，任务执行时自动注入
 - **现代UI：** 响应式设计，深色/浅色主题切换
 - **移动端：** 适配移动小屏样式
 - **远程执行：** 支持远程agent执行任务，展示执行结果
@@ -87,10 +90,19 @@
 - 支持系统级事件条件触发通知（例如任务失败报警、服务下线提醒）
 - 自动生成跨语言调用 API 示例代码供脚本集成
 
-### 环境变量
-- 安全存储敏感配置
-- 变量值脱敏显示
-- 任务执行时自动注入
+### 变量与机密
+- 支持普通环境变量与安全机密（Secret）分类管理
+- 机密使用 **AES-GCM** 加密存储，数据库不存明文
+- 秘钥仅在内存中留存，启动读取后立即销毁（Unset）
+- 执行日志自动搜索并**屏蔽(********)**敏感机密内容
+- 严格权限隔离：机密仅在定时任务调度时注入，终端/测试环境不可见
+
+### 仓库任务同步 (New)
+- 支持 青龙 仓库命令格式快捷导入
+- 自动解析脚本注释中的 Cron 表达式和环境变量名
+- 支持基于正则表达式的白名单、黑名单文件筛选
+- 支持脚本依赖文件的识别与保留
+- 自动同步远程 Git 仓库变更，增量更新面板任务
 
 ### 系统设置
 - 站点标题、标语、图标自定义
@@ -107,8 +119,9 @@
 
 ### 脚本运行环境
 白虎面板原生支持以下脚本的定时执行：
-- **Python3**, **Node.js**, **Bash** (内置环境)
+- **Python3**, **Node.js**, **Bash** (标准版镜像内置环境)
 - 通过 **Mise** 扩展：支持几乎所有主流编程语言的动态安装与切换。
+- **Minimal 版**：不预置 Python/Node，仅内置 Mise 底座，由用户按需安装。
 
 ### 依赖管理支持
 系统内置了高度集成的跨语言依赖管理器，支持自动化安装和管理以下语言的依赖项，并确保在容器内全局可用：
@@ -149,8 +162,9 @@
 
 | 标签 (Tag) | 基础镜像 | 说明 |
 | :--- | :--- | :--- |
-| `latest` | Debian 12 | 默认版本，集成 Python 3.13 与 Node.js 23 |
-| `latest-debian13` | Debian 13 | 尝鲜版本|
+| `latest` | Debian 12 | **默认推荐**：集成 Python 3.13 与 Node.js 23，开箱即用 |
+| `latest-debian13` | Debian 13 | 尝鲜版本，基于 Debian Trixie |
+| `latest-minimal` | Debian 13 | **最小化版**：不预置语言环境，由用户通过面板自主按需安装 |
 
 > **提示**：下方部署示例默认使用 `latest` 标签，如需换用 Debian 13 版，只需将 `latest` 替换为 `latest-debian13` 即可。
 
@@ -184,6 +198,7 @@ docker run -d \
   -e BH_DB_TYPE=sqlite \
   -e BH_DB_PATH=/app/data/baihu.db \
   -e BH_DB_TABLE_PREFIX=baihu_ \
+  -e BAIHU_SECRET_KEY=your_secret_key_here \
   --restart unless-stopped \
   ghcr.io/engigu/baihu:latest
 ```
@@ -213,6 +228,7 @@ services:
       - BH_DB_TYPE=sqlite
       - BH_DB_PATH=/app/data/baihu.db
       - BH_DB_TABLE_PREFIX=baihu_
+      - BAIHU_SECRET_KEY=your_secret_key_here
       # - BH_SERVER_URL_PREFIX=/baihu  # 可选：配置 URL 前缀用于反向代理
     logging:
       driver: json-file
@@ -240,6 +256,7 @@ docker run -d \
   -e BH_DB_PASSWORD=your_password \
   -e BH_DB_NAME=baihu \
   -e BH_DB_TABLE_PREFIX=baihu_ \
+  -e BAIHU_SECRET_KEY=your_secret_key_here \
   --restart unless-stopped \
   ghcr.io/engigu/baihu:latest
 ```
@@ -270,6 +287,7 @@ services:
       - BH_DB_PASSWORD=your_password
       - BH_DB_NAME=baihu
       - BH_DB_TABLE_PREFIX=baihu_
+      - BAIHU_SECRET_KEY=your_secret_key_here
     logging:
       driver: json-file
       options:
@@ -295,6 +313,7 @@ docker run -d \
   -v $(pwd)/configs:/app/configs \
   -v $(pwd)/envs:/app/envs \
   -e TZ=Asia/Shanghai \
+  -e BAIHU_SECRET_KEY=your_secret_key_here \
   --restart unless-stopped \
   ghcr.io/engigu/baihu:latest
 ```
@@ -314,6 +333,7 @@ services:
       - ./envs:/app/envs
     environment:
       - TZ=Asia/Shanghai
+      - BAIHU_SECRET_KEY=your_secret_key_here
     logging:
       driver: json-file
       options:
@@ -372,6 +392,7 @@ services:
       - BH_DB_TYPE=sqlite
       - BH_DB_PATH=/app/data/baihu.db
       - BH_DB_TABLE_PREFIX=baihu_
+      - BAIHU_SECRET_KEY=your_secret_key_here
     logging:
       driver: json-file
       options:
@@ -428,6 +449,7 @@ services:
       - BH_DB_PASSWORD=your_password  # 修改为你的 MySQL 密码
       - BH_DB_NAME=baihu
       - BH_DB_TABLE_PREFIX=baihu_
+      - BAIHU_SECRET_KEY=your_secret_key_here
     logging:
       driver: json-file
       options:
@@ -653,6 +675,7 @@ table_prefix = baihu_
 | `BH_DB_NAME` | database.dbname | 数据库名称 | ql_panel |
 | `BH_DB_PATH` | database.path | SQLite 文件路径 | ./data/baihu.db |
 | `BH_DB_TABLE_PREFIX` | database.table_prefix | 表前缀 | baihu_ |
+| `BAIHU_SECRET_KEY` | - | 系统加密秘钥，用于机密功能（**注：仅支持环境变量设置，不支持配置文件**） | - |
 
 ### URL 前缀配置
 
@@ -732,4 +755,6 @@ location /baihu/ {
 
 ## 许可证 
 
-[MIT License](LICENSE)
+本项目采用 [Apache License 2.0](LICENSE) 协议发布，并包含额外的 [NOTICE](NOTICE) 说明。
+
+**强制要求：** 在任何分发、修改或二次开发中，**必须完整保留原作者署名及项目名称**（详见 NOTICE 文件）。

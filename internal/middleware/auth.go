@@ -47,7 +47,8 @@ func AuthRequired() gin.HandlerFunc {
 
 		// 安全增强：校验数据库中该用户的 ID 是否与 Token 一致，并验证 TokenVersion
 		var user models.User
-		if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil || user.ID != userID || user.TokenVersion != tokenVersion {
+		res := database.DB.Where("username = ?", username).Limit(1).Find(&user)
+		if res.Error != nil || res.RowsAffected == 0 || user.ID != userID || user.TokenVersion != tokenVersion {
 			utils.Unauthorized(c, "会话失效，请重新登录")
 			ClearAuthCookie(c)
 			c.Abort()
@@ -150,7 +151,8 @@ func checkOpenapiToken(c *gin.Context, settingsSvc *services.SettingsService) bo
 
 	// 模拟 Admin 角色
 	var adminUser models.User
-	if err := database.DB.Where("role = ?", "admin").First(&adminUser).Error; err != nil {
+	res := database.DB.Where("role = ?", "admin").Limit(1).Find(&adminUser)
+	if res.Error != nil || res.RowsAffected == 0 {
 		utils.Unauthorized(c, "未找到管理员账户，OpenAPI Token 校验失败")
 		c.Abort()
 		return true

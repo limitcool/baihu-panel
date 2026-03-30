@@ -132,6 +132,7 @@ const (
 	// Agent 状态
 	AgentStatusOnline  = "online"
 	AgentStatusOffline = "offline"
+	
 	// AppLog 分类
 	LogCategoryDefault      = "default"
 	LogCategorySystemNotice = "system_notice"
@@ -148,6 +149,10 @@ const (
 	LogStatusRead    = "read"
 	LogStatusSuccess = "success"
 	LogStatusFailed  = "failed"
+
+	// Env Type
+	EnvTypeNormal = "normal"
+	EnvTypeSecret = "secret"
 )
 
 // TablePrefix 表前缀，从配置文件读取

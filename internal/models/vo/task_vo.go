@@ -19,8 +19,9 @@ type TaskVO struct {
 	WorkDir     string              `json:"work_dir"`
 	CleanConfig string              `json:"clean_config"`
 	Envs        string              `json:"envs"`
-	Languages   []map[string]string `json:"languages"`
+	Languages   models.TaskLanguages `json:"languages"`
 	AgentID     *string             `json:"agent_id"`
+	RepoTaskID  string              `json:"repo_task_id"`
 	Enabled       bool                `json:"enabled"`
 	RetryCount    int                 `json:"retry_count"`
 	RetryInterval int                 `json:"retry_interval"`
@@ -51,6 +52,7 @@ func ToTaskVO(task *models.Task) *TaskVO {
 		Envs:        string(task.Envs),
 		Languages:   task.Languages,
 		AgentID:       task.AgentID,
+		RepoTaskID:    task.RepoTaskID,
 		Enabled:       task.Enabled,
 		RetryCount:    task.RetryCount,
 		RetryInterval: task.RetryInterval,

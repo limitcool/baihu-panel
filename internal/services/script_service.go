@@ -31,7 +31,8 @@ func (ss *ScriptService) GetScriptsByUserID(userID string) []models.Script {
 
 func (ss *ScriptService) GetScriptByID(id string) *models.Script {
 	var script models.Script
-	if err := database.DB.Where("id = ?", id).First(&script).Error; err != nil {
+	res := database.DB.Where("id = ?", id).Limit(1).Find(&script)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return nil
 	}
 	return &script
@@ -39,7 +40,8 @@ func (ss *ScriptService) GetScriptByID(id string) *models.Script {
 
 func (ss *ScriptService) UpdateScript(id string, name, content string) *models.Script {
 	var script models.Script
-	if err := database.DB.Where("id = ?", id).First(&script).Error; err != nil {
+	res := database.DB.Where("id = ?", id).Limit(1).Find(&script)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return nil
 	}
 	script.Name = name

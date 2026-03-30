@@ -20,9 +20,8 @@ func (s *SendStatsService) IncrementStats(taskID string, status string) error {
 	day := systime.FormatDate(time.Now())
 
 	var stats models.SendStats
-	result := database.DB.Where("task_id = ? AND day = ? AND status = ?", taskID, day, status).First(&stats)
-
-	if result.Error != nil {
+	res := database.DB.Where("task_id = ? AND day = ? AND status = ?", taskID, day, status).Limit(1).Find(&stats)
+	if res.Error != nil || res.RowsAffected == 0 {
 		// 不存在则创建
 		stats = models.SendStats{
 			ID:     utils.GenerateID(),

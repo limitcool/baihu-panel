@@ -4,8 +4,8 @@ ENV TZ=Asia/Shanghai
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
-ENV NODE_VERSION=23
-ENV PYTHON_VERSION=3.13
+ENV NODE_VERSION=23.11.1
+ENV PYTHON_VERSION=3.13.12
 
 RUN sed -i 's@deb.debian.org@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list.d/debian.sources \
     && sed -i 's@security.debian.org@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list.d/debian.sources \
@@ -19,6 +19,9 @@ RUN sed -i 's@deb.debian.org@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.li
          xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev" \
     && apt-get install -y --no-install-recommends $BUILD_DEPS \
     && rm -rf /var/lib/apt/lists/*
+
+COPY docker/mise-hook.sh /etc/profile.d/mise-hook.sh
+RUN cat /etc/profile.d/mise-hook.sh >> /etc/bash.bashrc
 
 RUN go env -w GOPROXY=https://goproxy.cn,direct
 

@@ -53,6 +53,7 @@ type AgentTask struct {
 	Envs        string              `json:"envs"`
 	Languages   []map[string]string `json:"languages"`
 	RandomRange int                 `json:"random_range"`
+	Secrets     []string            `json:"secrets"`
 	Enabled     bool                `json:"enabled"`
 }
 
@@ -82,6 +83,10 @@ func (t *AgentTask) GetEnvs() string {
 
 func (t *AgentTask) GetEnvVars() []string {
 	return nil
+}
+
+func (t *AgentTask) GetSecrets() []string {
+	return t.Secrets
 }
 
 func (t *AgentTask) GetLanguages() []map[string]string {
@@ -491,9 +496,10 @@ func (a *Agent) handleTasks(data json.RawMessage) {
 
 func (a *Agent) handleExecute(data json.RawMessage) {
 	var req struct {
-		TaskID string `json:"task_id"`
-		LogID  string `json:"log_id"`
-		Envs   string `json:"envs"`
+		TaskID  string   `json:"task_id"`
+		LogID   string   `json:"log_id"`
+		Envs    string   `json:"envs"`
+		Secrets []string `json:"secrets"`
 	}
 	if err := json.Unmarshal(data, &req); err != nil {
 		logger.Errorf("解析立即执行请求失败: %v", err)
@@ -524,6 +530,7 @@ func (a *Agent) handleExecute(data json.RawMessage) {
 		Command:   task.Command,
 		WorkDir:   task.WorkDir,
 		Envs:      executor.ParseEnvVars(envs),
+		Secrets:   req.Secrets,
 		Timeout:   task.Timeout,
 		Languages: task.Languages,
 		UseMise:   task.UseMise(),

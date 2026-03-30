@@ -1,7 +1,6 @@
 package controllers
 
 import (
-
 	"github.com/engigu/baihu-panel/internal/models/vo"
 	"github.com/engigu/baihu-panel/internal/services"
 	"github.com/engigu/baihu-panel/internal/utils"
@@ -15,6 +14,18 @@ type EnvController struct {
 
 func NewEnvController(envService *services.EnvService) *EnvController {
 	return &EnvController{envService: envService}
+}
+
+// GetSecretStatus 获取加密秘钥状态
+// @Summary 获取加密秘钥状态
+// @Description 返回系统是否已配置加密秘钥
+// @Tags Env
+// @Produce json
+// @Success 200 {object} utils.Response{data=bool} "成功"
+// @Router /env/secret-status [get]
+// @Security BearerAuth
+func (ec *EnvController) GetSecretStatus(c *gin.Context) {
+	utils.Success(c, utils.IsSecretKeySet())
 }
 
 // CreateEnvVar 创建环境变量
@@ -34,7 +45,9 @@ func (ec *EnvController) CreateEnvVar(c *gin.Context) {
 		Name   string `json:"name" binding:"required"`
 		Value  string `json:"value" binding:"required"`
 		Remark string `json:"remark"`
+		Type   string `json:"type"`
 		Hidden *bool  `json:"hidden"`
+		Enabled *bool  `json:"enabled"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -42,12 +55,21 @@ func (ec *EnvController) CreateEnvVar(c *gin.Context) {
 		return
 	}
 
+	if req.Type == "" {
+		req.Type = "normal"
+	}
+
 	hidden := true
 	if req.Hidden != nil {
 		hidden = *req.Hidden
 	}
 
-	envVar := ec.envService.CreateEnvVar(req.Name, req.Value, req.Remark, hidden, userID)
+	enabled := true
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+
+	envVar := ec.envService.CreateEnvVar(req.Name, req.Value, req.Remark, req.Type, hidden, enabled, userID)
 	utils.Success(c, vo.ToEnvVO(envVar))
 }
 
@@ -61,13 +83,15 @@ func (ec *EnvController) CreateEnvVar(c *gin.Context) {
 // @Param name query string false "按名称模糊查询"
 // @Param page query int false "页码"
 // @Param page_size query int false "每页数量"
+// @Param type query string false "按类型筛选"
 // @Success 200 {object} utils.Response{data=utils.PaginationData{data=[]vo.EnvVO}}
 // @Router /env [get]
 func (ec *EnvController) GetEnvVars(c *gin.Context) {
 	userID := c.GetString("userID")
 	p := utils.ParsePagination(c)
 	name := c.DefaultQuery("name", "")
-	envVars, total := ec.envService.GetEnvVarsWithPagination(userID, name, p.Page, p.PageSize)
+	envType := c.DefaultQuery("type", "")
+	envVars, total := ec.envService.GetEnvVarsWithPagination(userID, name, envType, p.Page, p.PageSize)
 	utils.PaginatedResponse(c, vo.ToEnvVOListFromModels(envVars), total, p)
 }
 
@@ -133,15 +157,21 @@ func (ec *EnvController) UpdateEnvVar(c *gin.Context) {
 	}
 
 	var req struct {
-		Name   string `json:"name"`
-		Value  string `json:"value"`
-		Remark string `json:"remark"`
-		Hidden *bool  `json:"hidden"`
+		Name    string `json:"name"`
+		Value   string `json:"value"`
+		Remark  string `json:"remark"`
+		Type    string `json:"type"`
+		Hidden  *bool  `json:"hidden"`
+		Enabled *bool  `json:"enabled"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequest(c, err.Error())
 		return
+	}
+
+	if req.Type == "" {
+		req.Type = "normal"
 	}
 
 	// 对于更新，获取现有数据
@@ -155,7 +185,13 @@ func (ec *EnvController) UpdateEnvVar(c *gin.Context) {
 	if req.Hidden != nil {
 		hidden = *req.Hidden
 	}
-	envVar := ec.envService.UpdateEnvVar(id, req.Name, req.Value, req.Remark, hidden)
+
+	enabled := existing.Enabled
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+
+	envVar := ec.envService.UpdateEnvVar(id, req.Name, req.Value, req.Remark, req.Type, hidden, enabled)
 	if envVar == nil {
 		utils.NotFound(c, "环境变量不存在")
 		return

@@ -97,8 +97,5 @@ export default defineConfig({
     }
   },
   define: {
-    // Define MONACO_BASE_URL for monaco-editor to correctly load its workers and assets
-    // This path should match the destination of viteStaticCopy for monaco-editor's 'vs' folder
-    MONACO_BASE_URL: JSON.stringify('./assets/vs')
   }
 })

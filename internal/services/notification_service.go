@@ -13,6 +13,8 @@ import (
 	"github.com/engigu/baihu-panel/internal/utils"
 
 	"github.com/engigu/baihu-panel/internal/sdk/messenger"
+	"gorm.io/gorm"
+	"regexp"
 )
 
 // NotifyChannel 通知渠道配置
@@ -152,18 +154,45 @@ func (s *NotificationService) SaveBinding(binding *models.NotifyBinding) error {
 	if binding.ID == "" {
 		// 检查是否已经存在相同的绑定（避免重复点击导致多个记录）
 		var existing models.NotifyBinding
-		err := database.DB.Where("type = ? AND event = ? AND way_id = ? AND data_id = ?",
-			binding.Type, binding.Event, binding.WayID, binding.DataID).First(&existing).Error
-		if err == nil {
-			// 如果已存在且未删除，直接返回（或者更新它）
-			*binding = existing
-			return nil
+		res := database.DB.Where("type = ? AND event = ? AND way_id = ? AND data_id = ?",
+			binding.Type, binding.Event, binding.WayID, binding.DataID).Limit(1).Find(&existing)
+		if res.Error == nil && res.RowsAffected > 0 {
+			// 如果已存在且未删除，更新现有记录（特别是 Extra 字段）
+			existing.Extra = binding.Extra
+			err := database.DB.Save(&existing).Error
+			if err == nil {
+				*binding = existing
+			}
+			return err
 		}
 
 		binding.ID = utils.GenerateID()
 		return database.DB.Create(binding).Error
 	}
 	return database.DB.Save(binding).Error
+}
+
+// BatchSaveBindings 批量保存事件绑定
+func (s *NotificationService) BatchSaveBindings(bindingType, dataID string, bindings []models.NotifyBinding) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 如果指定了 dataID，先清理该对象的所有现有绑定
+		if dataID != "" {
+			if err := tx.Unscoped().Where("type = ? AND data_id = ?", bindingType, dataID).Delete(&models.NotifyBinding{}).Error; err != nil {
+				return err
+			}
+		}
+
+		// 批量插入新绑定
+		for i := range bindings {
+			bindings[i].ID = utils.GenerateID()
+			bindings[i].Type = bindingType
+			bindings[i].DataID = dataID
+			if err := tx.Create(&bindings[i]).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // DeleteBinding 删除事件绑定
@@ -246,7 +275,8 @@ func (s *NotificationService) SendByChannelID(channelID string, msg *NotifyMessa
 	defer s.mu.RUnlock()
 
 	var notifyWay models.NotifyWay
-	if err := database.DB.Where("id = ?", channelID).First(&notifyWay).Error; err != nil {
+	res := database.DB.Where("id = ?", channelID).Limit(1).Find(&notifyWay)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return &NotifyResult{Success: false, Error: "渠道不存在"}
 	}
 
@@ -287,6 +317,14 @@ func (s *NotificationService) SubscribeEvents(bus *eventbus.EventBus) {
 	bus.Subscribe(constant.EventSystemNotice, s.handleEvent(constant.BindingTypeSystem))
 }
 
+var ansiRegexp = regexp.MustCompile(`[\x1b\x9b][\[()#;?]*([0-9]{1,4}(;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]`)
+
+// stripAnsi 移除字符串中的 ANSI 转义码（如颜色代码）
+func stripAnsi(str string) string {
+	return ansiRegexp.ReplaceAllString(str, "")
+}
+
+// handleEvent 处理事件订阅并发送通知
 func (s *NotificationService) handleEvent(bindingType string) eventbus.Handler {
 	return func(e eventbus.Event) {
 		payload, ok := e.Payload.(map[string]interface{})
@@ -319,17 +357,17 @@ func (s *NotificationService) handleEvent(bindingType string) eventbus.Handler {
 			text = fmt.Sprintf("用户 %v 刚刚修改了密码", payload["username"])
 		case constant.EventTaskSuccess:
 			title = fmt.Sprintf("任务[%v] 成功", payload["task_name"])
-			text = fmt.Sprintf("任务 #%v %v\n状态: 成功\n耗时: %vms", payload["task_id"], payload["task_name"], payload["duration"])
+			text = fmt.Sprintf("任务 #%v %v\n状态: 成功\n执行时间: %v\n耗时: %vms", payload["task_id"], payload["task_name"], payload["start_time"], payload["duration"])
 		case constant.EventTaskFailed:
 			title = fmt.Sprintf("任务[%v] 失败", payload["task_name"])
 			if errStr, ok := payload["error"]; ok {
-				text = fmt.Sprintf("任务 #%v %v\n执行失败\n错误: %v", payload["task_id"], payload["task_name"], errStr)
+				text = fmt.Sprintf("任务 #%v %v\n执行失败\n执行时间: %v\n错误: %v", payload["task_id"], payload["task_name"], payload["start_time"], errStr)
 			} else {
-				text = fmt.Sprintf("任务 #%v %v\n执行失败\n状态: %v\n耗时: %vms", payload["task_id"], payload["task_name"], payload["status"], payload["duration"])
+				text = fmt.Sprintf("任务 #%v %v\n执行失败\n状态: %v\n执行时间: %v\n耗时: %vms", payload["task_id"], payload["task_name"], payload["status"], payload["start_time"], payload["duration"])
 			}
 		case constant.EventTaskTimeout:
 			title = fmt.Sprintf("任务[%v] 超时", payload["task_name"])
-			text = fmt.Sprintf("任务 #%v %v\n执行超时\n耗时: %vms", payload["task_id"], payload["task_name"], payload["duration"])
+			text = fmt.Sprintf("任务 #%v %v\n执行超时\n执行时间: %v\n耗时: %vms", payload["task_id"], payload["task_name"], payload["start_time"], payload["duration"])
 		case constant.EventSystemNotice:
 			title, _ = payload["title"].(string)
 			text, _ = payload["content"].(string)
@@ -337,7 +375,6 @@ func (s *NotificationService) handleEvent(bindingType string) eventbus.Handler {
 			return
 		}
 
-		msg := &NotifyMessage{Title: title, Text: text}
 		bindings := s.GetBindingsByEvent(bindingType, e.Type, dataID)
 		if len(bindings) == 0 {
 			return
@@ -354,12 +391,38 @@ func (s *NotificationService) handleEvent(bindingType string) eventbus.Handler {
 			if !ok || !ch.Enabled {
 				continue
 			}
-			go func(channel NotifyChannel) {
-				result := s.SendToChannel(channel, msg)
+
+			// 克隆文本以便修改
+			currentText := text
+
+			// 解析额外配置
+			var extra models.BindingExtra
+			if binding.Extra != "" {
+				_ = json.Unmarshal([]byte(binding.Extra), &extra)
+			}
+			// 默认日志限制为 1000
+			if extra.LogLimit <= 0 {
+				extra.LogLimit = 1000
+			}
+
+			// 如果开启了日志推送
+			if extra.EnableLog {
+				if output, ok := payload["output"].(string); ok && output != "" {
+					// 仅保留指定字数的日志内容并移除 ANSI 颜色代码
+					logSnippet := stripAnsi(output)
+					if len(logSnippet) > extra.LogLimit {
+						logSnippet = "...\n" + logSnippet[len(logSnippet)-extra.LogLimit:]
+					}
+					currentText += "\n\n【执行日志】\n" + logSnippet
+				}
+			}
+
+			go func(channel NotifyChannel, msgTitle, msgText string) {
+				result := s.SendToChannel(channel, &NotifyMessage{Title: msgTitle, Text: msgText})
 				if !result.Success {
 					logger.Warnf("[Notify] 发送事件 %s 到渠道 %s(%s) 失败: %s", e.Type, channel.Name, channel.Type, result.Error)
 				}
-			}(ch)
+			}(ch, title, currentText)
 		}
 	}
 }

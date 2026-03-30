@@ -84,7 +84,6 @@ func (nc *NotificationController) TestChannel(c *gin.Context) {
 	utils.Success(c, result)
 }
 
-
 // GetBindings 获取事件绑定列表
 func (nc *NotificationController) GetBindings(c *gin.Context) {
 	bindings := nc.notifyService.GetBindings()
@@ -94,11 +93,12 @@ func (nc *NotificationController) GetBindings(c *gin.Context) {
 // SaveBinding 保存事件绑定
 func (nc *NotificationController) SaveBinding(c *gin.Context) {
 	var req struct {
-		ID     string `json:"id"`
-		Type   string `json:"type"`
-		Event  string `json:"event"`
-		WayID  string `json:"way_id"`
-		DataID string `json:"data_id"`
+		ID     string         `json:"id"`
+		Type   string         `json:"type"`
+		Event  string         `json:"event"`
+		WayID  string         `json:"way_id"`
+		DataID string         `json:"data_id"`
+		Extra  models.BigText `json:"extra"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequest(c, "参数错误")
@@ -116,6 +116,7 @@ func (nc *NotificationController) SaveBinding(c *gin.Context) {
 		Event:  req.Event,
 		WayID:  req.WayID,
 		DataID: req.DataID,
+		Extra:  req.Extra,
 	}
 
 	if err := nc.notifyService.SaveBinding(binding); err != nil {
@@ -140,6 +141,31 @@ func (nc *NotificationController) DeleteBinding(c *gin.Context) {
 	}
 
 	utils.SuccessMsg(c, "删除成功")
+}
+
+// BatchSaveBindings 批量保存事件绑定
+func (nc *NotificationController) BatchSaveBindings(c *gin.Context) {
+	var req struct {
+		Type     string                 `json:"type"`
+		DataID   string                 `json:"data_id"`
+		Bindings []models.NotifyBinding `json:"bindings"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "参数错误")
+		return
+	}
+
+	if req.Type == "" {
+		utils.BadRequest(c, "类型不能为空")
+		return
+	}
+
+	if err := nc.notifyService.BatchSaveBindings(req.Type, req.DataID, req.Bindings); err != nil {
+		utils.ServerError(c, err.Error())
+		return
+	}
+
+	utils.SuccessMsg(c, "保存成功")
 }
 
 // SendNotification API 发送通知（供脚本调用）

@@ -11,20 +11,15 @@ env:
 
 jobs:
   build:
+    if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        base_type: [debian, debian13] # alpine skipped
+        base_type: [debian]
         include:
           - base_type: debian
             base_tag: base
             tag_suffix: ""
-#           - base_type: alpine
-#             base_tag: base-alpine
-#             tag_suffix: "-alpine"
-          - base_type: debian13
-            base_tag: base-debian13
-            tag_suffix: "-debian13"
 
     permissions:
       contents: read

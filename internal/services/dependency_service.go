@@ -33,8 +33,8 @@ func (s *DependencyService) List(language, langVersion string) ([]models.Depende
 func (s *DependencyService) Create(dep *models.Dependency) error {
 	// 检查是否已存在（名称、版本、语言及版本必须完全匹配）
 	var existing models.Dependency
-	err := database.DB.Where("name = ? AND version = ? AND language = ? AND lang_version = ?", dep.Name, dep.Version, dep.Language, dep.LangVersion).First(&existing).Error
-	if err == nil {
+	res := database.DB.Where("name = ? AND version = ? AND language = ? AND lang_version = ?", dep.Name, dep.Version, dep.Language, dep.LangVersion).Limit(1).Find(&existing)
+	if res.Error == nil && res.RowsAffected > 0 {
 		// 如果已存在，更新 ID 并执行更新
 		dep.ID = existing.ID
 		return database.DB.Model(&existing).Updates(dep).Error

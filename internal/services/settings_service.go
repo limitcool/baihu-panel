@@ -22,7 +22,7 @@ func (s *SettingsService) InitSettings() error {
 	for section, keys := range constant.DefaultSettings {
 		for key, value := range keys {
 			var count int64
-			database.DB.Model(&models.Setting{}).Where("section = ? AND `key` = ?", section, key).Count(&count)
+			database.DB.Model(&models.Setting{}).Where(&models.Setting{Section: section, Key: key}).Count(&count)
 			if count == 0 {
 				if err := database.DB.Create(&models.Setting{
 					ID:      utils.GenerateID(),
@@ -81,7 +81,7 @@ func (s *SettingsService) InitSettings() error {
 
 	for k, v := range defaultRetention {
 		var count int64
-		database.DB.Model(&models.Setting{}).Where("section = ? AND `key` = ?", constant.SectionSystem, k).Count(&count)
+		database.DB.Model(&models.Setting{}).Where(&models.Setting{Section: constant.SectionSystem, Key: k}).Count(&count)
 		if count == 0 {
 			s.Set(constant.SectionSystem, k, v)
 		}
@@ -89,7 +89,7 @@ func (s *SettingsService) InitSettings() error {
 
 	// 初始化或获取 JWT Secret 密码
 	var secCount int64
-	database.DB.Model(&models.Setting{}).Where("section = ? AND `key` = ?", constant.SectionSecurity, constant.KeySecret).Count(&secCount)
+	database.DB.Model(&models.Setting{}).Where(&models.Setting{Section: constant.SectionSecurity, Key: constant.KeySecret}).Count(&secCount)
 	var secretValue string
 	if secCount == 0 {
 		// 先尝试从配置文件读取遗留下来的旧设
@@ -121,7 +121,8 @@ func (s *SettingsService) Get(section, key string) string {
 		return cache.GetSiteCache(key)
 	}
 	var setting models.Setting
-	if err := database.DB.Where("section = ? AND `key` = ?", section, key).First(&setting).Error; err != nil {
+	res := database.DB.Where(&models.Setting{Section: section, Key: key}).Limit(1).Find(&setting)
+	if res.Error != nil || res.RowsAffected == 0 {
 		if def, ok := constant.DefaultSettings[section][key]; ok {
 			return def
 		}
@@ -133,7 +134,8 @@ func (s *SettingsService) Get(section, key string) string {
 // Set 设置单个值
 func (s *SettingsService) Set(section, key, value string) error {
 	var setting models.Setting
-	if database.DB.Where("section = ? AND `key` = ?", section, key).First(&setting).Error != nil {
+	res := database.DB.Where(&models.Setting{Section: section, Key: key}).Limit(1).Find(&setting)
+	if res.Error != nil || res.RowsAffected == 0 {
 		return database.DB.Create(&models.Setting{
 			ID:      utils.GenerateID(),
 			Section: section,
@@ -146,7 +148,7 @@ func (s *SettingsService) Set(section, key, value string) error {
 
 // Delete 删除单个设置
 func (s *SettingsService) Delete(section, key string) error {
-	return database.DB.Where("section = ? AND `key` = ?", section, key).Delete(&models.Setting{}).Error
+	return database.DB.Where(&models.Setting{Section: section, Key: key}).Delete(&models.Setting{}).Error
 }
 
 // GetSection 获取整个 section 的设置

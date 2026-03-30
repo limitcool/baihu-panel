@@ -34,6 +34,7 @@ type CronTask interface {
 	Task
 	GetSchedule() string
 	UseMise() bool
+	GetSecrets() []string
 	GetRandomRange() int
 }
 
@@ -115,6 +116,7 @@ func ExecuteWithHooks(ctx context.Context, req Request, stdout, stderr io.Writer
 
 	// 如果指定使用 mise，则预先构建好带 mise 的命令，这样 PreExecute 记录的就是完整命令
 	if req.UseMise {
+		utils.InjectNodePath(&req.Envs, req.Languages)
 		req.Command = utils.BuildMiseCommand(req.Command, req.Languages)
 		req.UseMise = false
 	}

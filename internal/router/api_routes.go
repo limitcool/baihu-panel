@@ -74,6 +74,8 @@ func registerTaskRoutes(g *gin.RouterGroup, c *Controllers) {
 		tasks.GET("/:id", c.Task.GetTask)
 		tasks.PUT("/:id", c.Task.UpdateTask)
 		tasks.DELETE("/:id", c.Task.DeleteTask)
+		tasks.POST("/batch-delete", c.Task.BatchDeleteTasks)
+		tasks.DELETE("/batch-by-query", c.Task.BatchDeleteByQuery)
 		tasks.POST("/stop/:logID", c.Task.StopTask)
 	}
 
@@ -88,6 +90,7 @@ func registerTaskRoutes(g *gin.RouterGroup, c *Controllers) {
 func registerEnvRoutes(g *gin.RouterGroup, c *Controllers) {
 	env := g.Group("/env")
 	{
+		env.GET("/secret-status", c.Env.GetSecretStatus)
 		env.POST("", c.Env.CreateEnvVar)
 		env.GET("", c.Env.GetEnvVars)
 		env.GET("/all", c.Env.GetAllEnvVars)
@@ -154,6 +157,7 @@ func registerSettingsRoutes(g *gin.RouterGroup, c *Controllers) {
 		settings.GET("/scheduler", c.Settings.GetSchedulerSettings)
 		settings.PUT("/scheduler", c.Settings.UpdateSchedulerSettings)
 		settings.GET("/about", c.Settings.GetAbout)
+		settings.GET("/changelog", c.Settings.GetChangelog)
 		settings.GET("/loginlogs", c.Settings.GetLoginLogs)
 		settings.POST("/backup", c.Settings.CreateBackup)
 		settings.GET("/backup/status", c.Settings.GetBackupStatus)
@@ -211,6 +215,11 @@ func registerMiseRoutes(g *gin.RouterGroup, c *Controllers) {
 		mise.GET("/plugins", c.Mise.Plugins)
 		mise.GET("/versions", c.Mise.Versions)
 		mise.GET("/verify-cmd", c.Mise.VerifyCommand)
+		mise.POST("/use-global", c.Mise.UseGlobal)
+		mise.POST("/unset-global", c.Mise.UnsetGlobal)
+		mise.GET("/envs", c.Mise.Envs)
+		mise.POST("/envs", c.Mise.SetEnv)
+		mise.DELETE("/envs", c.Mise.UnsetEnv)
 	}
 }
 
@@ -236,6 +245,7 @@ func registerNotificationRoutes(g *gin.RouterGroup, c *Controllers) {
 		notify.POST("/channels/test", c.Notification.TestChannel)
 		notify.GET("/bindings", c.Notification.GetBindings)
 		notify.POST("/bindings", c.Notification.SaveBinding)
+		notify.POST("/bindings/batch", c.Notification.BatchSaveBindings)
 		notify.DELETE("/bindings/:id", c.Notification.DeleteBinding)
 	}
 }

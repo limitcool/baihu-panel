@@ -11,12 +11,13 @@ window.addEventListener('vite:preloadError', () => {
 })
 
 const BASE_URL = (window as any).__BASE_URL__ || ''
+const origin = window.location.origin
 
 createApp(App)
   .use(router)
   .use(VueMonacoEditorPlugin, {
     paths: {
-      vs: BASE_URL + '/assets/vs'
+      vs: `${origin}${BASE_URL}/assets/vs`
     }
   })
   .mount('#app')

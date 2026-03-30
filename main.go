@@ -52,6 +52,7 @@ func main() {
 	}
 
 	if handler, ok := cmd.Handlers[commandName]; ok {
+		bootstrap.InitBasic() // 启动基础环境(配置和数据库)
 		handler(os.Args[2:])
 		return
 	}

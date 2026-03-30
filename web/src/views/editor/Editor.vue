@@ -27,6 +27,7 @@ const selectedFile = ref<string | null>(null)
 const fileContent = ref('')
 const originalContent = ref('')
 const isLoading = ref(false)
+const isRefreshing = ref(false)
 const isEditMode = ref(false)
 const hasChanges = computed(() => fileContent.value !== originalContent.value)
 
@@ -142,10 +143,13 @@ function handleResize() {
 }
 
 async function loadTree() {
+  isRefreshing.value = true
   try {
     fileTree.value = await api.files.tree()
   } catch {
     toast.error('加载文件树失败')
+  } finally {
+    isRefreshing.value = false
   }
 }
 
@@ -438,6 +442,7 @@ onUnmounted(() => {
       :file-tree="fileTree"
       :expanded-dirs="expandedDirs"
       :selected-path="selectedPath"
+      :is-refreshing="isRefreshing"
       @refresh="loadTree"
       @select="handleSelect"
       @delete="confirm => dialogsRef?.openDelete(confirm)"

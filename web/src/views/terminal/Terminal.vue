@@ -18,8 +18,15 @@ onMounted(async () => {
   }
 })
 
+const isReconnecting = ref(false)
+
 function reconnect() {
+  isReconnecting.value = true
   terminalRef.value?.reconnect()
+  // Add a slight delay to the animation so it's visible even for fast reconnections
+  setTimeout(() => {
+    isReconnecting.value = false
+  }, 1000)
 }
 </script>
 
@@ -52,8 +59,8 @@ function reconnect() {
         </Popover>
       </div>
       <Button variant="ghost" size="icon" class="h-6 w-6 text-gray-400 hover:text-white" @click="reconnect"
-        title="重新连接">
-        <RefreshCw class="h-3 w-3" />
+        :disabled="isReconnecting" title="重新连接">
+        <RefreshCw class="h-3 w-3" :class="{ 'animate-spin': isReconnecting }" />
       </Button>
     </div>
     <div class="flex-1 border border-[#3c3c3c] border-t-0 rounded-b-md overflow-hidden bg-[#1e1e1e]">

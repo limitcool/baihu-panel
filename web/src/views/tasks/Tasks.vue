@@ -7,7 +7,7 @@ import Pagination from '@/components/Pagination.vue'
 import TaskDialog from './TaskDialog.vue'
 import RepoDialog from './RepoDialog.vue'
 import LogViewer from '@/views/history/LogViewer.vue'
-import { Plus, Play, Pencil, Trash2, Search, ScrollText, GitBranch, Terminal, Server, Monitor, X, Loader2, Wifi, WifiOff, Zap, ZapOff, Copy, Tag } from 'lucide-vue-next'
+import { Plus, Play, Pencil, Trash2, Search, ScrollText, GitBranch, Terminal, Server, Monitor, X, Loader2, RefreshCw, Wifi, WifiOff, Zap, ZapOff, Copy, Tag } from 'lucide-vue-next'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, type Agent, type Task } from '@/api'
@@ -36,6 +36,7 @@ const filterType = ref<string>(TASK_TYPE.NORMAL)
 const filterAgentId = ref<string | null>(null)
 const currentPage = ref(1)
 const total = ref(0)
+const loading = ref(false)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 // 创建 agent 映射表
@@ -67,6 +68,7 @@ function getExecutorStatus(task: Task): 'local' | 'online' | 'offline' {
 }
 
 async function loadTasks() {
+  loading.value = true
   try {
     const res = await api.tasks.list({
       page: currentPage.value,
@@ -78,7 +80,9 @@ async function loadTasks() {
     })
     tasks.value = res.data
     total.value = res.total
-  } catch { toast.error('加载任务失败') }
+  } catch { toast.error('加载任务失败') } finally {
+    loading.value = false
+  }
 }
 
 async function loadAgents() {
@@ -346,6 +350,10 @@ watch(() => route.query.agent_id, (newVal) => {
             <span>{{ filterAgentName }}</span>
             <X class="h-3.5 w-3.5 cursor-pointer hover:text-destructive" @click="clearAgentFilter" />
           </div>
+
+          <Button variant="outline" size="icon" class="h-9 w-9 shrink-0" @click="loadTasks" :disabled="loading" title="刷新">
+            <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+          </Button>
 
           <div class="flex items-center gap-2 shrink-0 justify-end">
             <!-- 动态新增按钮 -->

@@ -9,6 +9,7 @@ defineProps<{
   fileTree: FileNode[]
   expandedDirs: Set<string>
   selectedPath: string | null
+  isRefreshing?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -67,8 +68,8 @@ function handleFilesUpload(e: Event) {
     <div class="flex items-center justify-between p-2 border-b">
       <span class="text-xs font-medium">脚本文件</span>
       <div class="flex gap-1">
-        <Button variant="ghost" size="icon" class="h-6 w-6" @click="emit('refresh')" title="刷新">
-          <RefreshCw class="h-3 w-3" />
+        <Button variant="ghost" size="icon" class="h-6 w-6" @click="emit('refresh')" :disabled="isRefreshing" title="刷新">
+          <RefreshCw class="h-3 w-3" :class="{ 'animate-spin': isRefreshing }" />
         </Button>
         <Button variant="ghost" size="icon" class="h-6 w-6" @click="triggerFilesUpload('')" title="上传文件/文件夹(放在根目录)">
           <FolderUp class="h-3 w-3" />

@@ -112,6 +112,11 @@ const (
 	TaskStatusCancelled = "cancelled"
 	TaskStatusQueued    = "queued"
 
+	// 工作流运行状态
+	WorkflowRunStatusRunning = "running"
+	WorkflowRunStatusSuccess = "success"
+	WorkflowRunStatusFailed  = "failed"
+
 	// 工作流触发条件
 	WorkflowConditionSuccess   = "success"
 	WorkflowConditionOnSuccess = "on_success"
@@ -123,6 +128,14 @@ const (
 	TaskTypeNormal  = "task"
 	TaskTypeRepo    = "repo"
 	TaskTypeControl = "control" // 虚拟控制节点，不执行真实任务只处理流程逻辑
+
+	// 控制节点子类型
+	WorkflowControlDelay     = "delay"
+	WorkflowControlCondition = "condition"
+	WorkflowControlLoop      = "loop"
+
+	// 虚拟任务 ID
+	WorkflowVirtualTaskID = "-1"
 
 	TriggerTypeCron         = "cron"
 	TriggerTypeBaihuStartup = "baihu_startup"

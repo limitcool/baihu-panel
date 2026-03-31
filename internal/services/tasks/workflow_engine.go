@@ -1,8 +1,8 @@
 package tasks
 
 import (
-	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,270 +13,272 @@ import (
 	"github.com/engigu/baihu-panel/internal/utils"
 )
 
-type FlowNode struct {
-	ID   string `json:"id"`
-	Type string `json:"type"`
-	Data struct {
-		TaskID      string `json:"taskId"` // Store the Baihu Task ID
-		NodeType    string `json:"nodeType"`
-		ControlType string `json:"controlType"`
-		Config      string `json:"config"` // JSON string for specific control configuration
-	} `json:"data"` // VueFlow stores custom payload in data
-}
+var outputRegex = regexp.MustCompile(`(?i)output\.([a-zA-Z0-9_-]+)\s*=\s*(.*)`)
 
-type FlowEdge struct {
-	ID           string `json:"id"`
-	Source       string `json:"source"`
-	Target       string `json:"target"`
-	Label        string `json:"label"`
-	SourceHandle string `json:"sourceHandle"` // Example: "success" or "failed"
-	Data         struct {
-		Condition string `json:"condition"`
-		NodeType  string `json:"nodeType"`
-	} `json:"data"`
-}
-
-type FlowData struct {
-	Nodes []FlowNode `json:"nodes"`
-	Edges []FlowEdge `json:"edges"`
-}
-
-// TriggerWorkflowNextTasks 当一个任务结束时，遍历所有开启的工作流并检查是否有满足触发条件的分支，自动触发下一级
-func (es *ExecutorService) TriggerWorkflowNextTasks(taskLog *models.TaskLog) {
-	// 如果任务非完成状态（成功或失败），则忽略
+// TriggerWorkflowNextTasks 当一个脚本结束时，遍历所有开启的工作流并检查是否有满足触发条件的分支，自动触发下一级
+func (es *ExecutorService) TriggerWorkflowNextTasks(taskLog *models.TaskLog, extraEnvs []string) {
+	// 如果脚本非完成状态（成功或失败），则忽略
 	if taskLog.Status != constant.TaskStatusSuccess && taskLog.Status != constant.TaskStatusFailed {
 		return
 	}
 
-	// 取出此任务记录的 WorkflowID 和 WorkflowRunID
-	// 如果不是由工作流发起的任务，则无需向下游传递
-	if taskLog.WorkflowID == nil || *taskLog.WorkflowID == "" || taskLog.WorkflowRunID == "" {
-		// 仍然需要支持由于普通任务完成意外触发了某个包含该任务的WF（兼容老逻辑）
-		// 但为了严格的运行追踪，我们最好只处理显式关联的流水线。
-		// 这里暂不 return，允许未标记的任务也触发对应连线，并为其生成一条新的 run_id
-	}
-
-	// 查出所有启用状态的工作流
+	// 查出所有启用状态的工作流，并预加载它们的节点和连线
 	var workflows []models.Workflow
-	if err := database.DB.Where("enabled = ?", true).Find(&workflows).Error; err != nil {
+	if err := database.DB.Table(models.Workflow{}.TableName()).
+		Preload("Nodes").
+		Preload("Edges").
+		Where("enabled = ?", true).
+		Find(&workflows).Error; err != nil {
 		logger.Errorf("[Workflow] 查找可用工作流失败: %v", err)
 		return
 	}
 
-	for _, wf := range workflows {
-		if wf.FlowData == "" {
-			continue
-		}
-
-		var flowData FlowData
-		if err := json.Unmarshal([]byte(wf.FlowData), &flowData); err != nil {
-			logger.Warnf("[Workflow] 解析工作流 %s 数据失败: %v", wf.ID, err)
-			continue
-		}
-
-		// 提取任务输出中的变量 (BAIHU_OUT_KEY=VALUE)
-		capturedEnvs := make([]string, 0)
-		if taskLog.Output != "" {
-			rawOutput, _ := utils.DecompressFromBase64(string(taskLog.Output))
-			lines := strings.Split(rawOutput, "\n")
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if strings.HasPrefix(line, "BAIHU_OUT_") {
-					// 将 BAIHU_OUT_ 转换为下游可用的环境变量（去掉 OUT_ 标识或保留原样均可，通常去掉更直观）
-					// 这里保留 BAIHU_ 标识，但去掉 OUT_，例如 BAIHU_OUT_FILE=x -> BAIHU_FILE=x
-					kv := strings.TrimPrefix(line, "BAIHU_OUT_")
-					capturedEnvs = append(capturedEnvs, "BAIHU_"+kv)
-				}
+	// 提取脚本输出中的变量：扫描日志获取 output.name=val 格式
+	// 存储在 map 中，确保最后一次出现的值覆盖之前的。
+	outputs := make(map[string]string)
+	if taskLog.Output != "" {
+		rawOutput, _ := utils.DecompressFromBase64(string(taskLog.Output))
+		lines := strings.Split(rawOutput, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			matches := outputRegex.FindStringSubmatch(line)
+			if len(matches) == 3 {
+				key := strings.TrimSpace(matches[1])
+				val := strings.TrimSpace(matches[2])
+				outputs[key] = val
 			}
 		}
+	}
 
-		// 建立 NodeID 到 TaskID 和 NodeType 的映射
+	// 将提取到的输出变量转换为下游的输入变量 (input.name=val)
+	capturedEnvs := make([]string, 0)
+	// 继承传下来的 context (清理掉旧的 input.xxx 防止冲突可以考虑，但通常追加即可)
+	for _, env := range extraEnvs {
+		if !strings.HasPrefix(env, "input.") {
+			capturedEnvs = append(capturedEnvs, env)
+		}
+	}
+	for k, v := range outputs {
+		capturedEnvs = append(capturedEnvs, fmt.Sprintf("input.%s=%s", k, v))
+	}
+
+	for _, wf := range workflows {
+		// 建立 NodeID 到 配置的映射（直接从结构化表中读取）
 		nodeIdToTaskId := make(map[string]string)
 		nodeIdToType := make(map[string]string)
+		nodeIdToControlType := make(map[string]string)
 		nodeIdToConfig := make(map[string]string)
-		for _, n := range flowData.Nodes {
-			if n.Data.TaskID != "" {
-				nodeIdToTaskId[n.ID] = n.Data.TaskID
-				nodeIdToType[n.ID] = n.Data.NodeType
-				nodeIdToConfig[n.ID] = n.Data.Config
-			}
+		
+		for _, n := range wf.Nodes {
+			nodeIdToTaskId[n.ID] = n.TaskID
+			nodeIdToType[n.ID] = n.NodeType
+			nodeIdToControlType[n.ID] = n.ControlType
+			nodeIdToConfig[n.ID] = n.Config
 		}
 
 		// 遍历工作流连线寻找目标
-		for _, edge := range flowData.Edges {
+		for _, edge := range wf.Edges {
 			sourceTaskId := nodeIdToTaskId[edge.Source]
 			if sourceTaskId != taskLog.TaskID {
 				continue
 			}
 
-			// 尝试多维度提取连线的条件设定
+			// 匹配条件
 			condition := edge.SourceHandle
-			if condition == "" && edge.Data.Condition != "" {
-				condition = edge.Data.Condition
-			}
-			if condition == "" && edge.Label != "" {
-				condition = edge.Label
+			if condition == "" {
+				condition = edge.Condition
 			}
 
 			match := false
-			// 成功分支
 			if (condition == constant.WorkflowConditionSuccess || condition == constant.WorkflowConditionOnSuccess) && taskLog.Status == constant.TaskStatusSuccess {
 				match = true
-			} else if (condition == constant.WorkflowConditionError || condition == constant.WorkflowConditionFailed || condition == constant.WorkflowConditionOnError) && taskLog.Status == constant.TaskStatusFailed { // 失败分支
+			} else if (condition == constant.WorkflowConditionError || condition == constant.WorkflowConditionFailed || condition == constant.WorkflowConditionOnError) && taskLog.Status == constant.TaskStatusFailed {
 				match = true
-			} else if condition == "" || condition == constant.WorkflowConditionAlways { // 无条件约束，总是触发
+			} else if condition == "" || condition == constant.WorkflowConditionAlways {
 				match = true
 			}
 
 			if match {
-				targetTaskId := nodeIdToTaskId[edge.Target]
+				targetNodeId := edge.Target
+				targetTaskId := nodeIdToTaskId[targetNodeId]
+				
 				if targetTaskId != "" {
-					logger.Infof("[Workflow] 任务 #%s 执行%s，触发后续工作流 (WF: #%s) 任务 #%s", taskLog.TaskID, taskLog.Status, wf.ID, targetTaskId)
-					// 如果当前任务属于某 Run，则延续；否则开启新的 Run 追踪支线
+					logger.Infof("[Workflow] 脚本 #%s 执行%s，触发流程 (WF: #%s) 节点 %s", taskLog.TaskID, taskLog.Status, wf.ID, targetNodeId)
+					
 					runID := taskLog.WorkflowRunID
 					if runID == "" {
 						runID = fmt.Sprintf("WF-RUN-%d", time.Now().UnixMilli())
 					}
 					
-					// 为了缓冲并发写入和让前置任务日志落库完毕，挂载协程延迟触发下游
-					go func(tid string, wfid string, rid string, extraEnvs []string, nType string, nConfig string) {
-						// 1. 如果是控制节点，由控制逻辑处理
-						if nType == constant.TaskTypeControl {
-							es.triggerControlNode(tid, nConfig, wfid, rid, extraEnvs)
+					go func(tid string, wfid string, rid string, extraEnvs []string, nType string, nCtrlType string, nConfig string) {
+						if tid == constant.WorkflowVirtualTaskID {
+							es.triggerControlNode(tid, nCtrlType, nConfig, wfid, rid, extraEnvs)
 							return
 						}
 
-						// 2. 普通任务节点，正常延迟 1s 触发执行
-						time.Sleep(time.Second) 
-						// 后续任务环境变量植入 Workflow 上下文
+						time.Sleep(time.Millisecond * 500) 
 						envs := []string{
 							fmt.Sprintf("BAIHU_WF_ID=%s", wfid),
 							fmt.Sprintf("BAIHU_WF_RUN_ID=%s", rid),
 						}
 						envs = append(envs, extraEnvs...)
 						es.ExecuteTask(tid, envs)
-					}(targetTaskId, wf.ID, runID, capturedEnvs, nodeIdToType[edge.Target], nodeIdToConfig[edge.Target])
+					}(targetTaskId, wf.ID, runID, capturedEnvs, nodeIdToType[targetNodeId], nodeIdToControlType[targetNodeId], nodeIdToConfig[targetNodeId])
 				}
 			}
 		}
 	}
 }
 
-// triggerControlNode 处理虚拟控制节点（如：延时、分支判断、WebHook）
-func (es *ExecutorService) triggerControlNode(targetNodeTaskId string, config string, wfID string, wfRunID string, envs []string) {
-	// 获取该节点的详细配置
-	var task models.Task
-	if err := database.DB.Where("id = ?", targetNodeTaskId).First(&task).Error; err != nil {
-		logger.Errorf("[Workflow] 控制节点任务 #%s 获取失败: %v", targetNodeTaskId, err)
-		return
-	}
-
-	// 创建一个特殊的控制节点执行日志
+// triggerControlNode 处理虚拟控制节点（如：延时、分支判断、循环）
+func (es *ExecutorService) triggerControlNode(targetNodeTaskId string, controlType string, config string, wfID string, wfRunID string, envs []string) {
+	nodeName := controlType
 	logService := &TaskLogService{}
-	taskLog, _ := logService.CreateEmptyLog(targetNodeTaskId, "Workflow Control: "+task.Name, &wfID, wfRunID)
+	taskLog, _ := logService.CreateEmptyLog(targetNodeTaskId, "Workflow Control: "+nodeName, &wfID, wfRunID)
 
-	// 根据子类型处理逻辑
-	// 注意：前端拖拽生成的控制节点 TaskID 我们定死为 -1，内部根据 ControlType/Tags 识别
-	nodeType := task.Tags // 延时节点对应 Tags="delay"
-	
-	switch nodeType {
-	case "delay":
-		// 读取延时时间（秒）
-		delaySec := 5 // 默认 5s
-		if config != "" {
-			fmt.Sscanf(config, "%d", &delaySec)
-		}
-		logger.Infof("[Workflow] 控制节点 %s #%s (延时) 开始等待 %d 秒 (Run: %s)", task.Name, targetNodeTaskId, delaySec, wfRunID)
+	switch controlType {
+	case constant.WorkflowControlDelay:
+		delaySec := 5 
+		fmt.Sscanf(config, "%d", &delaySec)
+		logger.Infof("[Workflow] 控制节点 (延时) 等待 %d 秒 (Run: %s)", delaySec, wfRunID)
 		
 		go func() {
 			time.Sleep(time.Duration(delaySec) * time.Second)
-			// 完成虚拟任务
 			taskLog.Status = constant.TaskStatusSuccess
 			now := models.Now()
 			taskLog.EndTime = &now
 			out, _ := utils.CompressToBase64(fmt.Sprintf("Wait completed after %d seconds.", delaySec))
 			taskLog.Output = models.BigText(out)
 			logService.ProcessTaskCompletion(taskLog)
-
-			// 触发下一级
-			es.TriggerWorkflowNextTasks(taskLog)
+			es.TriggerWorkflowNextTasks(taskLog, envs)
 		}()
+
+	case constant.WorkflowControlCondition:
+		logger.Infof("[Workflow] 控制节点 (条件判断) 执行: %s (Run: %s)", config, wfRunID)
+		result := es.evaluateConditionExpression(config, envs)
+		
+		taskLog.Status = constant.TaskStatusSuccess
+		if !result {
+			taskLog.Status = constant.TaskStatusFailed 
+		}
+		
+		now := models.Now()
+		taskLog.EndTime = &now
+		out, _ := utils.CompressToBase64(fmt.Sprintf("Condition: %s, Result: %v", config, result))
+		taskLog.Output = models.BigText(out)
+		logService.ProcessTaskCompletion(taskLog)
+		es.TriggerWorkflowNextTasks(taskLog, envs)
+
+	case constant.WorkflowControlLoop:
+		maxLoops := 1
+		fmt.Sscanf(config, "%d", &maxLoops)
+		
+		var count int64
+		database.DB.Model(&models.TaskLog{}).
+			Where("workflow_run_id = ? AND task_id = ? AND status = ?", wfRunID, targetNodeTaskId, constant.TaskStatusSuccess).
+			Count(&count)
+		
+		logger.Infof("[Workflow] 控制节点 (循环) 进度: %d/%d (Run: %s)", count+1, maxLoops, wfRunID)
+		
+		if int(count) < maxLoops {
+			taskLog.Status = constant.TaskStatusSuccess
+		} else {
+			taskLog.Status = constant.TaskStatusFailed 
+		}
+		
+		now := models.Now()
+		taskLog.EndTime = &now
+		out, _ := utils.CompressToBase64(fmt.Sprintf("Loop Count: %d/%d", count+1, maxLoops))
+		taskLog.Output = models.BigText(out)
+		logService.ProcessTaskCompletion(taskLog)
+		es.TriggerWorkflowNextTasks(taskLog, envs)
+
 	default:
-		// 未知类型直接设为成功并跳过
 		taskLog.Status = constant.TaskStatusSuccess
 		now := models.Now()
 		taskLog.EndTime = &now
 		logService.ProcessTaskCompletion(taskLog)
-		es.TriggerWorkflowNextTasks(taskLog)
+		es.TriggerWorkflowNextTasks(taskLog, envs)
 	}
 }
 
-// TriggerWorkflow 手动或定时根据 ID 立即执行工作流（找出根节点触发）
+// evaluateConditionExpression 评估表达式
+func (es *ExecutorService) evaluateConditionExpression(expr string, envs []string) bool {
+	if expr == "" {
+		return true
+	}
+	processed := expr
+	for _, env := range envs {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 {
+			key := parts[0]
+			val := parts[1]
+			// 支持 {{input.name}} 或 {{name}} 格式替换
+			processed = strings.ReplaceAll(processed, "{{"+key+"}}", val)
+			if strings.HasPrefix(key, "input.") {
+				shortKey := strings.TrimPrefix(key, "input.")
+				processed = strings.ReplaceAll(processed, "{{"+shortKey+"}}", val)
+			}
+		}
+	}
+	if strings.Contains(processed, "==") {
+		sides := strings.Split(processed, "==")
+		if len(sides) == 2 {
+			return strings.TrimSpace(sides[0]) == strings.TrimSpace(sides[1])
+		}
+	}
+	return strings.TrimSpace(processed) != "" && !strings.Contains(processed, "{")
+}
+
+// TriggerWorkflow 手动或定时执行工作流
 func (es *ExecutorService) TriggerWorkflow(workflowID string, extraEnvs []string) error {
 	var wf models.Workflow
-	if err := database.DB.Where("id = ?", workflowID).First(&wf).Error; err != nil {
+	err := database.DB.Table(models.Workflow{}.TableName()).
+		Preload("Nodes").
+		Preload("Edges").
+		Where("id = ?", workflowID).
+		First(&wf).Error
+	if err != nil {
 		return fmt.Errorf("工作流未找到: %v", err)
 	}
 
-	if wf.FlowData == "" || !wf.Enabled {
-		return fmt.Errorf("工作流为空或已被禁用")
+	if !wf.Enabled {
+		return fmt.Errorf("工作流已被禁用")
 	}
 
-	var flowData FlowData
-	if err := json.Unmarshal([]byte(wf.FlowData), &flowData); err != nil {
-		return fmt.Errorf("解析工作流数据失败: %v", err)
-	}
-
-	// 找出所有存在入度的 NodeID
 	hasIncomingEdges := make(map[string]bool)
-	for _, edge := range flowData.Edges {
+	for _, edge := range wf.Edges {
 		hasIncomingEdges[edge.Target] = true
 	}
 
-	// 收集所有根节点 TaskID
-	var rootTaskIDs []string
-	for _, node := range flowData.Nodes {
-		if !hasIncomingEdges[node.ID] && node.Data.TaskID != "" {
-			rootTaskIDs = append(rootTaskIDs, node.Data.TaskID)
-		}
-	}
-
-	if len(rootTaskIDs) == 0 {
-		return fmt.Errorf("工作流中没有找到可作为起点的独立根节点任务")
-	}
-
-	// 更新最后运行时间
+	runID := fmt.Sprintf("WF-RUN-%d", time.Now().UnixMilli())
 	now := models.LocalTime(time.Now())
 	database.DB.Model(&wf).Update("last_run", &now)
 
-	// 并发触发这些根节点
-	runID := fmt.Sprintf("WF-RUN-%d", time.Now().UnixMilli())
-	for _, node := range flowData.Nodes {
+	for _, node := range wf.Nodes {
 		if hasIncomingEdges[node.ID] {
 			continue
 		}
 		
-		tid := node.Data.TaskID
+		tid := node.TaskID
 		if tid == "" {
 			continue
 		}
 
-		go func(taskID string, nType string, nConfig string) {
-			// 如果起点就是个控制节点（比如延时启动 - 虽然少见）
-			if nType == constant.TaskTypeControl {
-				es.triggerControlNode(taskID, nConfig, wf.ID, runID, extraEnvs)
+		go func(taskID string, nType string, nCtrlType string, nConfig string) {
+			if taskID == constant.WorkflowVirtualTaskID {
+				es.triggerControlNode(taskID, nCtrlType, nConfig, wf.ID, runID, extraEnvs)
 				return
 			}
 
-			logger.Infof("[Workflow] 触发启动工作流 (WF: #%s), 启动根节点任务 #%s", wf.ID, taskID)
+			logger.Infof("[Workflow] 触发启动工作流 (WF: #%s), 启动根节点 %s", wf.ID, taskID)
 			envs := []string{
 				fmt.Sprintf("BAIHU_WF_ID=%s", wf.ID),
 				fmt.Sprintf("BAIHU_WF_RUN_ID=%s", runID),
-				"BAIHU_WF_TRIGGER=manual",
 			}
 			envs = append(envs, extraEnvs...)
 			es.ExecuteTask(taskID, envs)
-		}(tid, node.Data.NodeType, node.Data.Config)
+		}(tid, node.NodeType, node.ControlType, node.Config)
 	}
 
 	return nil

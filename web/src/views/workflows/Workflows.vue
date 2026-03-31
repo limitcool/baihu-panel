@@ -111,7 +111,7 @@ onMounted(() => {
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h2 class="text-xl sm:text-2xl font-bold tracking-tight">工作流编排</h2>
-        <p class="text-muted-foreground text-sm">将独立任务串接为复杂的自动化流水线</p>
+        <p class="text-muted-foreground text-sm">将独立脚本串接为复杂的自动化流水线</p>
       </div>
       <div class="flex flex-col sm:flex-row gap-2.5 w-full md:w-auto">
         <div class="flex items-center gap-2 w-full sm:w-auto">
@@ -197,7 +197,7 @@ onMounted(() => {
     <div v-if="workflows.length === 0" class="flex flex-col items-center justify-center p-8 sm:p-12 border border-dashed rounded-lg bg-muted/10">
       <Network class="h-10 w-10 text-muted-foreground/30 mb-4" />
       <p class="text-base font-medium text-foreground mb-1">暂无工作流</p>
-      <p class="text-sm text-muted-foreground mb-4 text-center max-w-sm">开始创建一个任务流，将琐碎的任务编排为自动化流水线</p>
+      <p class="text-sm text-muted-foreground mb-4 text-center max-w-sm">开始创建一个工作流，将琐碎的脚本编排为自动化流水线</p>
       <Button @click="openCreate">
         <Plus class="h-4 w-4 mr-2" />
         创建工作流
@@ -220,7 +220,7 @@ onMounted(() => {
         <AlertDialogHeader>
           <AlertDialogTitle>确认删除工作流？</AlertDialogTitle>
           <AlertDialogDescription>
-            此操作无法撤销。工作流配置将被永久删除。
+            工作流可以串联多个脚本，当上游脚本完成时自动触发下游脚本。
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

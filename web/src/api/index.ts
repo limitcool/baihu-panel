@@ -599,6 +599,8 @@ export interface Workflow {
   schedule: string
   enabled: boolean
   flow_data: string
+  nodes?: any[]
+  edges?: any[]
   last_run: string | null
   next_run: string | null
   created_at: string
@@ -689,4 +691,27 @@ export const LOG_STATUS = {
   READ: 'read',
   SUCCESS: 'success',
   FAILED: 'failed'
+} as const
+
+export const WORKFLOW = {
+  RUN_STATUS: {
+    RUNNING: 'running',
+    SUCCESS: 'success',
+    FAILED: 'failed'
+  },
+  NODE_TYPE: {
+    TASK: 'task',
+    CONTROL: 'control'
+  },
+  CONTROL_TYPE: {
+    DELAY: 'delay',
+    CONDITION: 'condition',
+    LOOP: 'loop'
+  },
+  CONDITION: {
+    SUCCESS: 'success',
+    FAILED: 'failed',
+    ALWAYS: 'always'
+  },
+  VIRTUAL_TASK_ID: '-1'
 } as const

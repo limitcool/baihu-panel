@@ -25,6 +25,10 @@ var allModels = []interface{}{
 	&models.AgentToken{},
 	&models.Language{},
 	&models.Workflow{},
+	&models.WorkflowVersion{},
+	&models.WorkflowNode{},
+	&models.WorkflowEdge{},
+	&models.WorkflowRun{},
 	&models.NotifyWay{},
 	&models.NotifyBinding{},
 }

@@ -23,6 +23,12 @@ func NewWorkflowController(workflowService *services.WorkflowService, executorSe
 	}
 }
 
+// WorkflowRequest 用于接收前端发送的带 JSON 流程图的数据
+type WorkflowRequest struct {
+	models.Workflow
+	FlowData string `json:"flow_data"`
+}
+
 func (ctrl *WorkflowController) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -66,7 +72,7 @@ func (ctrl *WorkflowController) Get(c *gin.Context) {
 }
 
 func (ctrl *WorkflowController) Create(c *gin.Context) {
-	var req models.Workflow
+	var req WorkflowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequest(c, "请求格式错误")
 		return
@@ -77,12 +83,17 @@ func (ctrl *WorkflowController) Create(c *gin.Context) {
 		return
 	}
 
-	if err := ctrl.workflowService.Create(&req); err != nil {
+	if err := ctrl.workflowService.Create(&req.Workflow); err != nil {
 		utils.ServerError(c, "保存失败")
 		return
 	}
+	
+	// 如果创建时也带了流程图数据，则执行一次更新拆分逻辑
+	if req.FlowData != "" {
+		ctrl.workflowService.Update(&req.Workflow, req.FlowData)
+	}
 
-	utils.Success(c, req)
+	utils.Success(c, req.Workflow)
 }
 
 func (ctrl *WorkflowController) Update(c *gin.Context) {
@@ -92,14 +103,14 @@ func (ctrl *WorkflowController) Update(c *gin.Context) {
 		return
 	}
 
-	var req models.Workflow
+	var req WorkflowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.BadRequest(c, "请求格式错误")
 		return
 	}
 
-	req.ID = id
-	if err := ctrl.workflowService.Update(&req); err != nil {
+	req.Workflow.ID = id
+	if err := ctrl.workflowService.Update(&req.Workflow, req.FlowData); err != nil {
 		utils.ServerError(c, "修改失败: "+err.Error())
 		return
 	}

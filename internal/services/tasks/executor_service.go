@@ -257,7 +257,7 @@ func (h *ServerSchedulerHandler) OnTaskCompleted(req *executor.ExecutionRequest,
 	h.es.taskLogService.ProcessTaskCompletion(taskLog)
 
 	// 后置：检查引发 Workflow 的下游节点并发起
-	h.es.TriggerWorkflowNextTasks(taskLog)
+	h.es.TriggerWorkflowNextTasks(taskLog, req.Envs)
 
 
 	// 更新内存缓冲
@@ -341,7 +341,7 @@ func (h *ServerSchedulerHandler) OnTaskFailed(req *executor.ExecutionRequest, er
 	h.es.taskLogService.ProcessTaskCompletion(taskLog)
 
 	// 失败时也检查是否存在 fallback 动作的连线
-	h.es.TriggerWorkflowNextTasks(taskLog)
+	h.es.TriggerWorkflowNextTasks(taskLog, req.Envs)
 
 	// 更新内存缓冲
 	h.es.UpdateResult(executor.ExecutionResult{

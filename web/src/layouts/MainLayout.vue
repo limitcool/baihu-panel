@@ -106,11 +106,11 @@ onMounted(() => {
 
 <template>
   <!-- Root Container: Handles the background and centering on 2K+ screens -->
-  <div class="h-screen w-full bg-slate-50/50 dark:bg-slate-950 flex items-center justify-center 2xl:p-8 3xl:p-12 transition-all duration-500 overflow-hidden">
+  <div class="h-screen w-full bg-slate-50/50 dark:bg-zinc-950 flex items-center justify-center 2xl:p-8 3xl:p-12 transition-all duration-500 overflow-hidden">
     
     <!-- Application Card: The main floating surface -->
     <div :style="mobileMenuOpen ? 'transform: scale(0.98); opacity: 0.9;' : ''"
-      class="flex h-full w-full bg-white dark:bg-slate-950 relative transition-all duration-500 overflow-hidden
+      class="flex h-full w-full bg-background relative transition-all duration-500 overflow-hidden
              2xl:max-w-[1800px] 2xl:max-h-[92vh] 2xl:rounded-[2.5rem] 2xl:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.12)] 2xl:border 2xl:border-slate-200/60 dark:2xl:border-slate-800/40
              3xl:max-w-[2200px] 3xl:max-h-[90vh]">
       
@@ -119,27 +119,27 @@ onMounted(() => {
   
       <!-- Sidebar -->
       <aside :class="[
-        'fixed lg:static inset-y-0 z-50 w-44 border-r bg-white dark:bg-slate-950 flex flex-col transition-all duration-300 ease-in-out',
+        'fixed lg:static inset-y-0 z-50 w-44 border-r bg-background flex flex-col transition-all duration-300 ease-in-out',
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       ]">
-        <div class="h-14 flex items-center justify-center px-4 font-semibold text-lg border-b relative bg-white dark:bg-slate-950">
+        <div class="h-14 flex items-center justify-center px-4 font-semibold text-lg border-b relative">
           <span>{{ siteSettings.title }}</span>
           <Button variant="ghost" size="icon" class="h-8 w-8 lg:hidden absolute right-2" @click="mobileMenuOpen = false">
             <X class="h-4 w-4" />
           </Button>
         </div>
-        <nav class="flex-1 px-3 py-6 space-y-1 flex flex-col items-center overflow-y-auto bg-white dark:bg-slate-950">
+        <nav class="flex-1 px-3 py-6 space-y-1 flex flex-col items-center overflow-y-auto">
           <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" custom v-slot="{ navigate }">
             <Button variant="ghost"
-              :class="['justify-start gap-3 h-9 px-3 w-full', isItemActive(item) && 'bg-accent text-accent-foreground']"
+              :class="['justify-center gap-3 h-9 px-3 w-full max-w-[140px]', isItemActive(item) && 'bg-accent text-accent-foreground font-semibold shadow-sm']"
               @click="handleNavClick(navigate)">
               <component :is="item.icon" class="h-4 w-4" />
               {{ item.label }}
             </Button>
           </RouterLink>
         </nav>
-        <div class="px-3 py-4 border-t flex justify-center bg-white dark:bg-slate-950">
-          <Button variant="ghost" class="justify-start gap-3 h-9 px-3 w-full text-muted-foreground hover:text-foreground"
+        <div class="px-3 py-4 border-t flex justify-center">
+          <Button variant="ghost" class="justify-center gap-3 h-9 px-3 w-content min-w-[120px] text-muted-foreground hover:text-foreground line-clamp-1"
             @click="logout">
             <LogOut class="h-4 w-4" />
             退出登录
@@ -148,9 +148,9 @@ onMounted(() => {
       </aside>
   
       <!-- Main Content Area -->
-      <main class="flex-1 flex flex-col min-w-0 relative bg-gray-50/50 dark:bg-transparent">
+      <main class="flex-1 flex flex-col min-w-0 relative">
         <!-- Top Navigation Bar -->
-        <header class="h-14 border-b bg-white dark:bg-slate-950 flex items-center justify-between px-4 lg:px-6 shrink-0 sticky top-0 z-30">
+        <header class="h-14 border-b bg-background flex items-center justify-between px-4 lg:px-6 shrink-0 sticky top-0 z-30 shadow-sm">
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <Button variant="ghost" size="icon" class="h-8 w-8 lg:hidden shrink-0 border" @click="mobileMenuOpen = true">
               <Menu class="h-5 w-5" />
@@ -160,14 +160,14 @@ onMounted(() => {
               <span class="sm:hidden">{{ sentenceContent }}</span>
             </span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-3">
             <SystemNotice />
             <ThemeToggle />
           </div>
         </header>
   
         <!-- Page View Container -->
-        <div class="flex-1 overflow-auto relative">
+        <div class="flex-1 overflow-auto relative bg-background/50">
           <div class="p-4 lg:p-6 mx-auto">
             <RouterView />
           </div>

@@ -110,7 +110,7 @@ onMounted(() => {
     
     <!-- Application Card: The main floating surface -->
     <div :style="mobileMenuOpen ? 'transform: scale(0.98); opacity: 0.9;' : ''"
-      class="flex h-full w-full bg-background relative transition-all duration-500 overflow-hidden
+      class="flex h-full w-full bg-white dark:bg-slate-950 relative transition-all duration-500 overflow-hidden
              2xl:max-w-[1800px] 2xl:max-h-[92vh] 2xl:rounded-[2.5rem] 2xl:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.12)] 2xl:border 2xl:border-slate-200/60 dark:2xl:border-slate-800/40
              3xl:max-w-[2200px] 3xl:max-h-[90vh]">
       
@@ -119,26 +119,26 @@ onMounted(() => {
   
       <!-- Sidebar -->
       <aside :class="[
-        'fixed lg:static inset-y-0 z-50 w-44 2xl:w-52 border-r bg-background flex flex-col transition-all duration-300 ease-in-out',
+        'fixed lg:static inset-y-0 z-50 w-44 2xl:w-52 border-r bg-white dark:bg-slate-900 flex flex-col transition-all duration-300 ease-in-out',
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       ]">
-        <div class="h-14 flex items-center justify-center px-4 font-bold text-lg border-b relative">
+        <div class="h-14 flex items-center justify-center px-4 font-bold text-lg border-b relative bg-white dark:bg-slate-900">
           <span>{{ siteSettings.title }}</span>
           <Button variant="ghost" size="icon" class="h-8 w-8 lg:hidden absolute right-2" @click="mobileMenuOpen = false">
             <X class="h-4 w-4" />
           </Button>
         </div>
-        <nav class="flex-1 px-3 py-6 space-y-1 flex flex-col items-center overflow-y-auto custom-scrollbar">
+        <nav class="flex-1 px-3 py-6 space-y-1 flex flex-col items-center overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
           <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" custom v-slot="{ navigate }">
             <Button variant="ghost"
-              :class="['justify-start gap-3 h-9 px-3 w-full', isItemActive(item) && 'bg-primary/5 text-primary font-semibold shadow-sm']"
+              :class="['justify-start gap-3 h-9 px-3 w-full', isItemActive(item) && 'bg-slate-100 dark:bg-slate-800 text-primary font-semibold shadow-sm']"
               @click="handleNavClick(navigate)">
               <component :is="item.icon" class="h-3.5 w-3.5" />
               <span class="text-[13px]">{{ item.label }}</span>
             </Button>
           </RouterLink>
         </nav>
-        <div class="px-3 py-4 border-t flex justify-center">
+        <div class="px-3 py-4 border-t flex justify-center bg-white dark:bg-slate-900">
           <Button variant="ghost" class="justify-start gap-3 h-9 px-3 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
             @click="logout">
             <LogOut class="h-3.5 w-3.5" />
@@ -148,14 +148,14 @@ onMounted(() => {
       </aside>
   
       <!-- Main Content Area -->
-      <main class="flex-1 flex flex-col min-w-0 relative bg-white/5 dark:bg-slate-900/10">
+      <main class="flex-1 flex flex-col min-w-0 relative bg-slate-50/30 dark:bg-slate-950/20">
         <!-- Top Navigation Bar -->
-        <header class="h-14 border-b bg-background/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-6 shrink-0 sticky top-0 z-30">
+        <header class="h-14 border-b bg-white dark:bg-slate-900 flex items-center justify-between px-4 lg:px-6 shrink-0 sticky top-0 z-30 shadow-sm">
           <div class="flex items-center gap-3 flex-1 min-w-0">
-            <Button variant="ghost" size="icon" class="h-8 w-8 lg:hidden shrink-0 border bg-muted/20" @click="mobileMenuOpen = true">
+            <Button variant="ghost" size="icon" class="h-8 w-8 lg:hidden shrink-0 border bg-slate-50 dark:bg-slate-800" @click="mobileMenuOpen = true">
               <Menu class="h-4 w-4" />
             </Button>
-            <span class="text-xs text-muted-foreground truncate italic opacity-80" :title="sentence">
+            <span class="text-xs text-muted-foreground truncate italic opacity-80" :title="sentence" style="color: #6b7280;">
               <span class="hidden sm:inline">{{ sentence }}</span>
               <span class="sm:hidden">{{ sentenceContent }}</span>
             </span>

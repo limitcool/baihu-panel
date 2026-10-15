@@ -1,0 +1,79 @@
+name: Fork Build Image
+
+# Throwaway build lane for the fork only (upstream deploy.yml is disabled on forks).
+# Purpose: publish a patched ghcr.io/limitcool/baihu image so the homelab can pin it
+# while PR engigu/baihu-panel#194 (OIDC state fix) awaits upstream merge.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: baihu
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Build Web
+        run: |
+          cd web
+          npm ci
+          npm run build
+          cd ..
+
+      - name: Build Binaries and Agents
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          chmod +x build/build-go.sh
+          ./build/build-go.sh ci-artifacts dist-assets
+
+      - name: Prepare build context
+        run: |
+          cp dist-assets/bin/linux-amd64/baihu ./baihu
+          chmod +x ./baihu
+          mkdir -p data/agent
+          cp -r dist-assets/agent/* data/agent/
+          rm -rf dist-assets
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          target: ci
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:1.5.4-oidcstatefix
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:oidcstatefix
+          build-args: |
+            BASE_TAG=base
